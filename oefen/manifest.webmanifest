@@ -1,0 +1,10 @@
+{
+  "name": "Kompas Oefentocht",
+  "short_name": "Oefentocht",
+  "description": "Buitenvaardigheden oefenen tijdens een kompaswandeling met papieren kaart: korte opdrachten bij de punten, aankomstcontrole en voortgang zonder bereik.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#111713",
+  "theme_color": "#111713",
+  "lang": "nl"
+}

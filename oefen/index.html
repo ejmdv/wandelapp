@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6E2D0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111713" media="(prefers-color-scheme: dark)">
+<title>Kompas Oefentocht</title>
+<link rel="manifest" href="manifest.webmanifest">
+<script>try { const t = localStorage.getItem("veldThema"); if (t === "donker" || t === "licht") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="../stijl/veld.css">
+<style>
+  /* schermindeling oefenapp; kleuren en letters uit ../stijl/veld.css */
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--tekst); font:17px/1.45 var(--tekstfont); overflow-x:hidden; }
+  main { max-width:520px; margin:0 auto; padding:12px 16px calc(24px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:14px; }
+  h1 { font:600 17px var(--tekstfont); margin:4px 0 0; color:var(--bij); }
+  main:has(#vOnder:not(.hidden)) > h1 { display:none; }
+  h2 { font-size:20px; margin:0; }
+  p { margin:0; }
+  ol, ul { margin:0; padding-left:20px; }
+  section { display:flex; flex-direction:column; gap:12px; }
+  .muted { color:var(--bij); font-size:15px; }
+  .card { background:var(--vlak); border:1px solid var(--lijn); border-radius:var(--hoek); padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .big { font:700 88px/0.95 var(--num); font-stretch:condensed; font-variant-numeric:tabular-nums; color:var(--tekst); }
+  .id { font:700 24px var(--mono); letter-spacing:1px; }
+  button, a.btn { display:block; width:100%; min-height:52px; padding:12px 14px; border:1px solid var(--rand); border-radius:var(--hoek); font:600 17px var(--tekstfont);
+    text-align:center; text-decoration:none; cursor:pointer; background:var(--vlak); color:var(--tekst); }
+  button.go { min-height:60px; border:0; background:var(--actie); color:var(--actieTekst); font-size:20px; font-weight:700; }
+  button.ghost, a.btn.ghost { background:var(--vlak); }
+  button.small { min-height:44px; font-size:15px; padding:8px 12px; width:auto; }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; }
+  .row > * { flex:1; }
+  .ok { color:var(--tekst); font-weight:700; }
+  .ok::before { content:"✓ "; color:var(--actie); }
+  .warn { color:var(--fout); font-weight:700; }
+  label.chk { display:flex; gap:10px; align-items:flex-start; font-size:16px; padding:6px 0; }
+  label.chk input { width:22px; height:22px; flex:none; margin-top:1px; accent-color:var(--actie); }
+  input[type=number], input[type=text], select { width:100%; min-height:48px; padding:10px 12px; font:inherit; font-size:20px; border:1px solid var(--rand); border-radius:var(--hoek); background:var(--bg); color:var(--tekst); }
+  .field { display:flex; flex-direction:column; gap:4px; }
+  .field span { font-size:15px; color:var(--bij); }
+  table.pts { width:100%; border-collapse:collapse; font-size:15px; }
+  table.pts td { padding:7px 4px; border-top:1px solid var(--lijn); vertical-align:top; }
+  table.pts td.n { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--bij); }
+  table.pts td.n:first-child { text-align:left; font:700 18px var(--num); color:var(--tekst); width:30px; }
+  .tag { display:inline-block; font-size:13px; font-weight:600; padding:1px 8px; border-radius:20px; border:1px solid var(--rand); color:var(--bij); margin-left:6px; }
+  .timer { font:700 56px var(--num); font-variant-numeric:tabular-nums; text-align:center; }
+  .ster { color:#c8008c; }
+  .wacht { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--rand); border-radius:20px; padding:4px 14px; margin:6px auto 0; }
+  .wacht svg { vertical-align:-4px; }
+  .kort { font-size:19px; }
+  .uitslag { font-size:24px; font-weight:700; }
+  #toast { position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--tekst); color:var(--bg); padding:10px 16px; border-radius:var(--hoek); font-size:15px; max-width:90vw; pointer-events:none; }
+  #fout { border:2px solid var(--fout); }
+  #opslag { font-size:14px; color:var(--bij); display:flex; gap:8px; align-items:center; }
+  #opslag::before { content:""; width:10px; height:10px; border-radius:50%; background:var(--actie); flex:none; }
+  #opslag[data-staat="let"]::before { background:var(--aandacht); }
+  details summary { cursor:pointer; font-weight:600; min-height:44px; display:flex; align-items:center; }
+  .wrap { overflow-wrap:anywhere; }
+  /* onderweg: dag klein bovenaan, groot doel, hoofdactie, rest inklapbaar */
+  .kop { position:relative; display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:10px; border-bottom:1px solid var(--lijn); }
+  .kop svg { position:absolute; inset:0; width:100%; height:100%; color:var(--lijn); pointer-events:none; }
+  .kop > span { position:relative; color:var(--bij); font-size:15px; }
+  .kop > button { position:relative; width:auto; min-height:44px; font-size:15px; padding:0 14px; }
+  .doel p.naam { font:600 24px/1.25 var(--tekstfont); }
+  .herken { border-left:4px solid var(--actie); }
+  .feiten { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--lijn); border:1px solid var(--lijn); border-radius:var(--hoek); overflow:hidden; margin:0; }
+  .feiten div { background:var(--vlak); padding:10px 12px; }
+  .feiten dt { font-size:14px; color:var(--bij); }
+  .feiten dd { margin:0; font:700 26px/1.1 var(--num); font-variant-numeric:tabular-nums; }
+  .feiten dd small { font:400 15px var(--tekstfont); color:var(--bij); }
+  details.punten summary { justify-content:space-between; list-style:none; }
+  details.punten summary::-webkit-details-marker { display:none; }
+  details.punten summary::after { content:"Toon"; font-weight:500; color:var(--bij); }
+  details.punten[open] summary::after { content:"Verberg"; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kompas Oefentocht</h1>
+
+  <!-- Opslagfout: de laatste handeling is NIET bewaard -->
+  <div class="card hidden" id="fout">
+    <p class="warn">Niet bewaard</p>
+    <p id="foutTekst"></p>
+    <div class="row"><button class="go" id="foutOpnieuw">Opnieuw proberen</button><button class="ghost" id="foutExport">Exporteer voortgang</button></div>
+  </div>
+
+  <!-- 1. Geen tocht: pakket openen -->
+  <section id="vLeeg" class="hidden">
+    <div class="card">
+      <p>Open het <b>tochtpakket</b> dat je in de planner maakte (bestand eindigt op <i>.tocht.json</i>, bijvoorbeeld in iCloud Drive).</p>
+      <button class="go" id="openFile">Open tochtpakket</button>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+      <p class="muted">Voortgang terugzetten: open hier een geëxporteerd bestand (<i>.voortgang.json</i>).</p>
+      <p class="muted">Gebruik daarna steeds de app van je beginscherm: Safari en het beginscherm bewaren elk hun eigen voortgang.</p>
+    </div>
+    <!-- herstel uit export terwijl dit toestel al andere voortgang van dezelfde tocht heeft: bewust kiezen -->
+    <div class="card hidden" id="herstelKeus">
+      <p class="warn">Andere voortgang op dit toestel</p>
+      <p id="herstelTekst"></p>
+      <div class="row"><button class="go" id="herstelExport">Ga verder met de export</button><button class="ghost" id="herstelHier">Houd dit toestel</button></div>
+    </div>
+    <div class="card hidden" id="oudeTochten"></div>
+  </section>
+
+  <!-- 2. Voorbereiding: controleren, leergebieden kiezen, vastleggen -->
+  <section id="vVoor" class="hidden">
+    <div class="card">
+      <h2 id="voNaam"></h2>
+      <p class="muted">Staat deze code onderaan je kaartbladen?</p>
+      <div class="id" id="voId"></div>
+      <p id="voInfo"></p>
+    </div>
+    <div class="card">
+      <h2 id="voGebKop">Wat wil je oefenen?</h2>
+      <p class="muted" id="voGebUitleg">Kies er twee of drie. Welke oefeningen je krijgt, zie je pas onderweg.</p>
+      <div id="voGebieden"></div>
+      <p id="voGebiedWarn" class="warn hidden"></p>
+    </div>
+    <div class="card">
+      <details>
+        <summary>Instellingen</summary>
+        <div class="field" style="margin-top:10px"><span>Aankomstcontrole: binnen hoeveel meter van het punt (standaard 25)</span>
+          <input type="number" id="voRadius" min="10" max="150" step="5" value="25" inputmode="numeric"></div>
+      </details>
+    </div>
+    <button class="go" id="voStart">Leg tocht vast</button>
+    <button class="ghost" id="voAnder">Ander tochtpakket</button>
+  </section>
+
+  <!-- 3. Klaar voor vertrek / onderweg -->
+  <section id="vOnder" class="hidden">
+    <header class="kop">
+      <svg viewBox="0 0 390 60" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M-10 46 C 60 26, 120 54, 190 36 S 320 18, 400 32"/><path d="M-10 58 C 70 38, 130 66, 200 48 S 330 30, 400 44"/></g></svg>
+      <span id="onKop"></span>
+      <button type="button" id="onTochtKnop" aria-expanded="false" aria-controls="onTocht">⋯ Meer</button>
+    </header>
+    <!-- tochtinformatie en minder gebruikte handelingen -->
+    <div class="card hidden" id="onTocht">
+      <h2 id="onTochtNaam"></h2>
+      <p class="muted">Code op je kaartbladen:</p>
+      <div class="id" id="onTochtCode"></div>
+      <a class="btn ghost hidden" id="onNood" target="_blank" rel="noopener">Noodpagina</a>
+      <details class="punten">
+        <summary id="onLijstKop">Alle punten</summary>
+        <div id="onLijst"></div>
+      </details>
+      <!-- koers, afstand en RD verklappen opdrachten: alleen hier, en alleen op verzoek -->
+      <button class="ghost" type="button" id="onFeitenKnop">Koers en afstand tonen (verklapt opdrachten)</button>
+      <dl class="feiten hidden" id="onFeiten">
+        <div><dt id="onKoersLabel">Koers</dt><dd id="onKoers"></dd></div>
+        <div><dt>Hemelsbreed</dt><dd id="onAfstand"></dd></div>
+      </dl>
+      <button class="ghost" id="onDeel">Voortgang delen</button>
+      <button class="ghost" id="onDagStop">Dag stoppen</button>
+      <button class="ghost" id="onStop">Tocht beëindigen</button>
+      <label class="chk"><input type="checkbox" id="onDetails"> GPS-details tonen bij aankomst</label>
+      <label class="field"><span>Weergave</span>
+        <select id="onThema"><option value="systeem">Zoals het toestel</option><option value="donker">Donker</option><option value="licht">Licht</option></select></label>
+    </div>
+    <div class="doel">
+      <p class="muted" id="onLabel">Op weg naar</p>
+      <div class="big" id="onNr"></div>
+      <p class="naam" id="onNaam"></p>
+      <p class="wacht hidden" id="onWacht"></p>
+      <p class="muted" id="onWaar"></p>
+      <p class="warn" id="onSub"></p>
+    </div>
+    <div class="card hidden" id="onOpdracht">
+      <p><span class="ster" aria-hidden="true">★</span> <b>Opdracht onderweg</b><span class="tag hidden" id="onOpdrTag"></span></p>
+      <button class="ghost" id="onOpdrOpen">Open als je even stilstaat</button>
+    </div>
+    <button class="go" id="onStart">Ik vertrek</button>
+    <button class="go hidden" id="onCheck">Ik ben bij punt —</button>
+    <div class="row">
+      <button class="ghost" id="onPauze">Pauze</button>
+      <button class="ghost" id="onSkip">Overslaan</button>
+    </div>
+    <div class="card hidden" id="onPauzeKeus">
+      <p><b>Welke pauze?</b></p>
+      <div id="onPauzeKnoppen" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </section>
+
+  <!-- 4. Aankomstcontrole -->
+  <section id="vCheck" class="hidden">
+    <div class="card">
+      <p class="muted">Ben je bij punt</p>
+      <div class="big" id="ckNr"></div>
+      <p id="ckMsg" style="font-size:18px"></p>
+      <p id="ckDetail" class="muted"></p>
+    </div>
+    <button class="go hidden" id="ckOpnieuw">Opnieuw meten</button>
+    <button class="hidden" id="ckHand">Ja, ik sta er</button>
+    <button class="ghost hidden" id="ckSkip">Punt overslaan</button>
+    <button class="ghost" id="ckTerug">Terug</button>
+  </section>
+
+  <!-- 5. Stap: oefening, uitslag tijdvoorspelling, pauze -->
+  <section id="vStap" class="hidden">
+    <div class="card" id="stCard"></div>
+    <div id="stKnoppen" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <!-- 6. Dag afgerond / ingekort -->
+  <section id="vDag" class="hidden">
+    <div class="card">
+      <h2 id="dgKop"></h2>
+      <p id="dgTekst"></p>
+    </div>
+    <div class="card" id="dgLijst"></div>
+    <button class="go" id="dgVolgende">Dag 2 klaarzetten</button>
+    <button class="ghost" id="dgDeel">Voortgang delen</button>
+  </section>
+
+  <!-- 7. Einde tocht -->
+  <section id="vEind" class="hidden">
+    <div class="card">
+      <h2 id="eiKop">Logboek compleet</h2>
+      <p id="eiTekst"></p>
+    </div>
+    <div class="card" id="eiLijst"></div>
+    <button class="go" id="eiDeel">Exporteer voortgang (bestand)</button>
+    <button class="ghost" id="eiNieuw">Nieuwe tocht openen</button>
+  </section>
+  <p id="opslag" class="hidden" role="status"></p>
+</main>
+<div id="toast" class="hidden"></div>
+
+<script src="../contract/canon.js"></script>
+<script src="../contract/plan.js"></script>
+<script src="versie.js"></script>
+<script src="oefeningen.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const rad = d => d * Math.PI / 180, norm = d => (d % 360 + 360) % 360;
+const fmtKm = m => (m / 1000).toLocaleString("nl-NL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtDeg = d => String(Math.round(norm(d)) % 360).padStart(3, "0") + "°";
+const nu = () => new Date().toISOString();
+const minTussen = (a, b) => Math.round((new Date(b) - new Date(a)) / 60000);
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); });
+const OEF = Object.fromEntries(OEFENINGEN.map(o => [o.id, o]));
+const GEBIED = Object.fromEntries(LEERGEBIEDEN.map(g => [g.id, g]));
+// besluit 19-10-2026: alleen vrijgegeven oefeningen worden ingepland (eerst een compacte set van 12)
+const VRIJ = OEFENINGEN.filter(o => o.status === "vrijgegeven");
+const LIB_VERSIE = typeof BIBLIOTHEEK_VERSIE === "string" ? BIBLIOTHEEK_VERSIE : "onbekend";
+const PAUZE_MIN = { coffee: 15, lunch: 30 };
+const RUSTNAAM = { bench: "Bankje", picnic_table: "Picknicktafel", picnic_site: "Picknickplek", shelter: "Schuilhut" };   // oude plannen (v1) zonder durationMin
+// sleutel van een pauze binnen de dag ("coffee1", "lunch", "coffee2"); oudere plannen hadden er één per soort ("coffee", "lunch")
+const pzKey = (p, dayId) => p.key || p.pauseId.slice(dayId.length + 1);
+function pauzeNaam(p, pauses) {
+  if (p.kind === "lunch") return "Lunchpauze";
+  const koffie = pauses.filter(x => x.kind === "coffee");
+  return koffie.length > 1 ? `${["Eerste", "Tweede", "Derde"][koffie.indexOf(p)] || "Nog een"} koffiepauze` : "Koffiepauze";
+}
+
+// --- RD (benadering Schreutelkamp & Strang van Hees, ±1 m; zelfde als de noodpagina, werkt offline) ---
+function toRD(lat, lon) {
+  const dF = 0.36 * (lat - 52.15517440), dL = 0.36 * (lon - 5.38720621);
+  const R = [[0,1,190094.945],[1,1,-11832.228],[2,1,-114.221],[0,3,-32.391],[1,0,-0.705],[3,1,-2.340],[1,3,-0.608],[0,2,-0.008],[2,3,0.148]];
+  const S = [[1,0,309056.544],[0,2,3638.893],[2,0,73.077],[1,2,-157.984],[3,0,59.788],[0,1,0.433],[2,2,-6.439],[1,1,-0.032],[0,4,0.092],[1,4,-0.054]];
+  let x = 155000, y = 463000;
+  for (const [p, q, c] of R) x += c * dF ** p * dL ** q;
+  for (const [p, q, c] of S) y += c * dF ** p * dL ** q;
+  return [x, y];
+}
+function dist(a, b) {   // meters, a en b = [lat, lon]
+  const R = 6371000, f1 = rad(a[0]), f2 = rad(b[0]), df = f2 - f1, dl = rad(b[1] - a[1]);
+  const h = Math.sin(df / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.remove("hidden"); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.add("hidden"), 4000); }
+
+// =====================================================================================================
+// Opslag: IndexedDB. Elke handeling = toestand + gebeurtenis(sen) in één transactie; pas daarna verder.
+// Mislukt dat, dan blijft de vorige toestand gelden en verschijnt "Niet bewaard" (geen vals opgeslagen stap).
+// Oude v1-voortgang in localStorage (oefentocht:v1:*) wordt alleen gelezen, nooit gewijzigd of verwijderd.
+// =====================================================================================================
+let db = null, dbFout = null;
+function openDB() {
+  return new Promise((res, rej) => {
+    if (!("indexedDB" in window)) return rej(new Error("Deze browser heeft geen IndexedDB."));
+    const r = indexedDB.open("kompas-oefen", 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore("pakketten", { keyPath: "key" });
+      d.createObjectStore("toestand", { keyPath: "key" });
+      const ev = d.createObjectStore("events", { keyPath: "eventId" });
+      ev.createIndex("trip", "tripKey");
+      d.createObjectStore("meta", { keyPath: "k" });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error || new Error("IndexedDB openen mislukt."));
+    r.onblocked = () => rej(new Error("Opslag is geblokkeerd door een ander venster van deze app."));
+  });
+}
+const idb = (store, mode, fn) => new Promise((res, rej) => {
+  const tx = db.transaction(store, mode); let out;
+  Promise.resolve(fn(tx)).then(v => { out = v; });
+  tx.oncomplete = () => res(out); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error("Transactie afgebroken."));
+});
+const req = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+
+let S = null, M = null, PK = null;   // toestand, genormaliseerde tocht, origineel pakket
+let laatsteActie = null;               // voor "Opnieuw proberen" na een opslagfout
+// Schrijfslot tussen vensters (één wandeltoestel, tweede tabblad mag niets overschrijven): elke bewaarde toestand krijgt een volgnummer `rev`. Een handeling
+// geldt alleen als de opgeslagen rev nog gelijk is aan die waarvan dit venster uitging; anders heeft een ander venster
+// (tabblad, Safari naast beginscherm-app op hetzelfde toestel) intussen bewaard en weigeren we, zonder iets te overschrijven.
+// geladenRev = laatst bevestigde rev; volgendeRev = hoogste rev die een lopende handeling van dit venster heeft geclaimd.
+// Elke handeling claimt bij de start (synchroon) zijn eigen rev; IndexedDB voert readwrite-transacties uit in volgorde van
+// aanmaken, dus snel na elkaar in hetzelfde venster botst niet, en een tussentijds herladen verandert de claim niet.
+let geladenRev = 0, volgendeRev = 0;
+const laad = rec => { S = rec.S; geladenRev = volgendeRev = rec.rev || 0; };
+const kanaal = "BroadcastChannel" in window ? new BroadcastChannel("kompas-oefen") : null;
+async function herlaadLaatste(alleenRustig = false) {
+  const rec = await idb("toestand", "readonly", tx => req(tx.objectStore("toestand").get(M.key)));
+  // automatisch bijwerken niet tijdens een eigen handeling: die botst dan zelf en meldt het
+  if (alleenRustig && (bezigMet || volgendeRev !== geladenRev)) return false;
+  if (rec) { laad(rec); if (S.fase === "check") S.fase = "onder"; }
+  meetSessie++;   // lopende GPS-meting van de oude stand vervalt
+  $("fout").classList.add("hidden"); $("foutOpnieuw").textContent = "Opnieuw proberen"; laatsteActie = null;
+  toon();
+  return true;
+}
+if (kanaal) kanaal.onmessage = e => {
+  const m = e.data || {};
+  if (!M || m.key !== M.key || !(m.rev > volgendeRev)) return;
+  if (bezigMet || volgendeRev !== geladenRev) return;   // de lopende handeling botst dan zelf en meldt dat
+  herlaadLaatste(true).then(ok => { if (ok) toast("Bijgewerkt vanuit een ander venster van deze app."); });
+};
+
+// Een handeling uitvoeren: mutate past S aan; events worden met volgnummer in dezelfde transactie bewaard.
+async function doe(mutate, events = []) {
+  const vorig = structuredClone(S);
+  let botsing = false, mijnRev = null;
+  try {
+    mutate();
+    if (window.__failNextCommit) { window.__failNextCommit = false; throw new Error("gesimuleerde opslagfout"); }
+    if (!db) throw dbFout || new Error("Geen opslag beschikbaar.");
+    const snap = structuredClone(S), key = M.key;
+    mijnRev = ++volgendeRev;   // synchroon geclaimd, vóór de transactie wordt aangemaakt
+    await idb(["toestand", "events", "meta"], "readwrite", async tx => {
+      const huidig = await req(tx.objectStore("toestand").get(key));
+      if ((huidig ? huidig.rev || 0 : 0) !== mijnRev - 1) { botsing = true; tx.abort(); return; }
+      const meta = tx.objectStore("meta");
+      const dev = (await req(meta.get("device"))) || { k: "device", deviceId: uuid(), seq: 0 };
+      for (const e of events) {
+        dev.seq++;
+        const ev = { eventId: uuid(), tripId: M.tripId, revision: M.revision, planId: S.plan ? S.plan.planId : null, deviceId: dev.deviceId,
+          deviceSequence: dev.seq, eventType: e.type, payload: e.payload || {}, clientTime: nu() };
+        tx.objectStore("events").put({ eventId: ev.eventId, tripKey: M.key, synced: 0, ev });
+      }
+      meta.put(dev);
+      meta.put({ k: "actief", key });
+      tx.objectStore("toestand").put({ key, S: snap, rev: mijnRev });
+    });
+    geladenRev = Math.max(geladenRev, mijnRev);
+    if (kanaal) kanaal.postMessage({ key, rev: mijnRev });
+    $("fout").classList.add("hidden"); $("foutOpnieuw").textContent = "Opnieuw proberen";
+    laatsteActie = null;
+    setTimeout(sync, 0);
+    return true;
+  } catch (e) {
+    S = vorig;
+    if (mijnRev != null && volgendeRev === mijnRev) volgendeRev = mijnRev - 1;   // claim teruggeven als er niets na kwam
+    if (botsing) {
+      $("foutTekst").textContent = "Deze tocht is intussen in een ander venster van deze app bijgewerkt. Je laatste handeling is niet opgeslagen; laad de laatste stand en doe hem zo nodig opnieuw.";
+      $("foutOpnieuw").textContent = "Laad laatste stand"; laatsteActie = herlaadLaatste;
+    } else {
+      $("foutTekst").textContent = `De laatste handeling is niet op dit toestel opgeslagen (${e.message}). Je vorige stand geldt nog.`;
+      $("foutOpnieuw").textContent = "Opnieuw proberen";
+    }
+    $("fout").classList.remove("hidden");
+    return false;
+  }
+}
+// knophandeling met herkansing: bij een opslagfout kan "Opnieuw proberen" dezelfde handeling opnieuw doen
+// "is dit nog dezelfde stap?" op inhoud (na een mislukte opslag is S een teruggezette kopie)
+const zelfdeStap = (a, b) => !!a && !!b && a.t === b.t && a.id === b.id && a.i === b.i && a.moment === b.moment && a.kind === b.kind && a.key === b.key;
+let bezigMet = false;   // slot: een tweede tik tijdens een lopende handeling doet niets
+function actie(fn) { return async (...a) => { if (bezigMet) return; bezigMet = true; laatsteActie = () => fn(...a); try { await fn(...a); } finally { bezigMet = false; } }; }
+
+// =====================================================================================================
+// Pakket inlezen: v2 (contract/CONTRACT.md) of v1 (eerste versie, één dag, rechte afstanden)
+// =====================================================================================================
+const isNum = v => typeof v === "number" && Number.isFinite(v);
+const isStr = v => typeof v === "string";
+function inNL(lat, lon, rd) { return lat > 50.5 && lat < 53.8 && lon > 3.0 && lon < 7.4 && rd[0] > -10000 && rd[0] < 300000 && rd[1] > 280000 && rd[1] < 630000; }
+function normaliseer(pk) {
+  if (pk && pk.manifest && pk.manifest.schemaVersion === 2) return normaliseerV2(pk);
+  if (pk && pk.formaat === "kompas-tocht" && pk.versie === 1) return normaliseerV1(pk);
+  if (pk && pk.manifest && pk.manifest.schemaVersion > 2) throw new Error(`Tochtpakket versie ${pk.manifest.schemaVersion} is nieuwer dan deze app.`);
+  throw new Error("Dit is geen tochtpakket uit de planner.");
+}
+function normaliseerV2(pk) {
+  const m = pk.manifest;
+  if (m.format !== "kompas-tocht" || !isStr(m.tripId) || !Number.isInteger(m.revision) || !/^[0-9a-f]{64}$/.test(m.routeHash || "") || !/^[0-9a-f]{64}$/.test(m.contentHash || ""))
+    throw new Error("Manifest onvolledig.");
+  const nummers = v => String(v).split(".").map(n => parseInt(n, 10) || 0);
+  const ouder = (a, b) => { const x = nummers(a), y = nummers(b); for (let k = 0; k < Math.max(x.length, y.length); k++) if ((x[k] || 0) !== (y[k] || 0)) return (x[k] || 0) < (y[k] || 0); return false; };
+  if (isStr(m.minAppVersion) && ouder(APP_VERSIE, m.minAppVersion)) throw new Error(`Dit tochtpakket vraagt app-versie ${m.minAppVersion} of nieuwer; deze app is ${APP_VERSIE}. Open de app één keer met internet om bij te werken.`);
+  const { contentHash, created, ...mRest } = m;
+  if (Canon.hash({ ...pk, manifest: mRest }) !== contentHash) throw new Error("Inhoud klopt niet met de controlecode (bestand beschadigd of gewijzigd).");
+  const { title, ...tripCore } = pk.trip || {};
+  if (Canon.hash({ trip: tripCore, days: (pk.days || []).map(({ nood, ...x }) => x), checkpoints: pk.checkpoints, connections: pk.connections, sheets: pk.sheets }) !== m.routeHash)
+    throw new Error("Routecode klopt niet met de punten.");
+  // plan uit de planner (pictogrammen op het kaartblad): de afdrukcode dekt dan route én plan
+  const plan = pk.plan == null ? null : pk.plan;
+  if (plan !== null && !(plan && typeof plan === "object" && isStr(plan.libraryVersion) && Array.isArray(plan.areas) && plan.areas.length <= 3
+    && plan.areas.every(a => isStr(a) && Object.prototype.hasOwnProperty.call(GEBIED, a)) && Array.isArray(plan.days)))
+    throw new Error("Het oefenplan in het pakket is onvolledig.");
+  if (m.printCode !== (plan ? Canon.hash({ routeHash: m.routeHash, plan }) : m.routeHash).slice(0, 12)) throw new Error("Afdrukcode klopt niet.");
+  if (!Array.isArray(pk.days) || pk.days.length < 1 || pk.days.length > 7 || !Array.isArray(pk.checkpoints) || pk.checkpoints.length > 100 || !Array.isArray(pk.connections))
+    throw new Error("Dagen of punten ontbreken.");
+  const byId = new Map();
+  for (const c of pk.checkpoints) {
+    if (!isStr(c.checkpointId) || byId.has(c.checkpointId) || !isStr(c.name) || !Number.isInteger(c.displayNumber) || ![c.lat, c.lon].every(isNum)
+      || !Array.isArray(c.rd) || c.rd.length !== 2 || !c.rd.every(isNum) || !inNL(c.lat, c.lon, c.rd)) throw new Error("Een punt is onvolledig of ligt niet in Nederland.");
+    const [x, y] = toRD(c.lat, c.lon);
+    if (Math.hypot(x - c.rd[0], y - c.rd[1]) > 5) throw new Error(`Punt ${c.displayNumber}: RD en GPS-coördinaat komen niet overeen.`);
+    byId.set(c.checkpointId, c);
+  }
+  const conn = new Map(pk.connections.map(c => [`${c.from}>${c.to}>${c.kind}`, c]));
+  const days = pk.days.map((d, di) => {
+    if (d.dayId !== `d${di + 1}` || !Array.isArray(d.checkpointIds) || d.checkpointIds.length < 2) throw new Error(`Dag ${di + 1} is onvolledig.`);
+    let cumS = 0, cumP = 0, pathOk = true;
+    // kaartbladen van deze dag in afdrukvolgorde ("blad k/n" op de dag-PDF); valt onder de routecode
+    const bladen = (Array.isArray(pk.sheets) ? pk.sheets : []).filter(s => s && s.dayId === d.dayId && Array.isArray(s.bboxRD) && s.bboxRD.length === 4 && s.bboxRD.every(isNum));
+    const bladVan = rd => bladen.map((s, k) => rd[0] >= s.bboxRD[0] && rd[0] <= s.bboxRD[2] && rd[1] >= s.bboxRD[1] && rd[1] <= s.bboxRD[3] ? k + 1 : 0).filter(Boolean);
+    const cps = d.checkpointIds.map((id, i) => {
+      const c = byId.get(id);
+      if (!c || c.dayId !== d.dayId || c.displayNumber !== i + 1) throw new Error(`Dag ${di + 1}: nummering klopt niet (punt ${i + 1}).`);
+      const nxtId = d.checkpointIds[i + 1], cn = nxtId ? conn.get(`${id}>${nxtId}>normal`) : null;
+      const daarna = d.checkpointIds[i + 2], sk = daarna ? conn.get(`${id}>${daarna}>skip`) : null;
+      if (nxtId && (!cn || ![cn.straightM, cn.gridBearing, cn.magneticBearing].every(isNum) || !(cn.pathM === null || isNum(cn.pathM)))) throw new Error(`Dag ${di + 1}: verbinding na punt ${i + 1} ontbreekt.`);
+      const rest = c.rest && typeof c.rest === "object" && Object.prototype.hasOwnProperty.call(RUSTNAAM, c.rest.kind) && isNum(c.rest.m) ? { kind: c.rest.kind, m: Math.round(c.rest.m) } : null;
+      const p = { id, nr: c.displayNumber, name: c.name, kind: c.kind, lat: c.lat, lon: c.lon, rd: c.rd, oefenOk: c.source !== "straight", rust: !!rest, rest,
+        cumStraight: cumS, cumPath: pathOk ? cumP : null, bladen: bladVan(c.rd),
+        next: cn ? { straightM: cn.straightM, pathM: cn.pathM, grid: cn.gridBearing, mag: cn.magneticBearing } : null,
+        skip: sk && [sk.straightM, sk.gridBearing, sk.magneticBearing].every(isNum) ? { straightM: sk.straightM, grid: sk.gridBearing, mag: sk.magneticBearing } : null };
+      if (cn) { cumS += cn.straightM; if (cn.pathM == null) pathOk = false; else cumP += cn.pathM; }
+      return p;
+    });
+    const nood = isStr(d.nood) && /^https?:\/\//i.test(d.nood) ? d.nood : "";
+    return { dayId: d.dayId, seq: di + 1, date: /^\d{4}-\d{2}-\d{2}$/.test(d.date || "") ? d.date : "", cps, nood };
+  });
+  return { kind: "v2", key: `${m.tripId}:${m.revision}:${m.contentHash.slice(0, 12)}`, tripId: m.tripId, revision: m.revision, routeHash: m.routeHash,
+    printCode: m.printCode, title: isStr(pk.trip.title) ? pk.trip.title : "Tocht", days, plan, planSeed: Canon.hash(pk.checkpoints), decl: pk.trip && pk.trip.northReference && isNum(pk.trip.northReference.declinationDeg) ? pk.trip.northReference.declinationDeg : null, warnings: ((pk.checks || {}).warnings || []).filter(isStr) };
+}
+function normaliseerV1(pk) {
+  if (!/^[0-9a-f]{8}$/.test(pk.id || "") || !Array.isArray(pk.punten) || pk.punten.length < 2 || pk.punten.length > 100 || !isStr(pk.naam)) throw new Error("Tochtpakket (versie 1) is onvolledig.");
+  const cps = pk.punten.map((p, i) => {
+    const nv = p.naarVolgende, laatste = i === pk.punten.length - 1;
+    if (p.nr !== i + 1 || !isStr(p.naam) || ![p.lat, p.lon, p.kmVanafStart].every(isNum) || !Array.isArray(p.rd) || p.rd.length !== 2 || !p.rd.every(isNum)
+      || (!laatste && !(nv && [nv.m, nv.raster, nv.kompas].every(isNum)))) throw new Error(`Punt ${i + 1} is onvolledig.`);
+    // v1: alle afstanden zijn rechte lijnen (hemelsbreed); padlengte onbekend
+    return { id: `v1-${p.nr}`, nr: p.nr, name: p.naam, kind: i === 0 ? "start" : laatste ? "finish" : "target", lat: p.lat, lon: p.lon, rd: p.rd,
+      oefenOk: !p.recht, cumStraight: Math.round(p.kmVanafStart * 1000), cumPath: null,
+      next: nv ? { straightM: nv.m, pathM: null, grid: nv.raster, mag: nv.kompas } : null };
+  });
+  return { kind: "v1", key: `v1:${pk.id}`, tripId: `v1-${pk.id}`, revision: 1, routeHash: null, printCode: pk.id, title: pk.naam,
+    days: [{ dayId: "d1", seq: 1, date: /^\d{4}-\d{2}-\d{2}$/.test(pk.datum || "") ? pk.datum : "", cps, nood: isStr(pk.nood) && /^https?:\/\//i.test(pk.nood) ? pk.nood : "" }],
+    warnings: ["Ouder pakket: loopafstanden en dagindeling niet gecontroleerd; afstanden zijn hemelsbreed."] };
+}
+
+// =====================================================================================================
+// Planning: per dag twee koffiepauzes en een lunch (±25, 50 en 75 %) en oefenmomenten (±1 per 4 km, min 2, max 8); de
+// regels staan in contract/plan.js, gedeeld met de planner. Een pakket uit de planner bevat het plan al (pictogrammen op het
+// kaartblad): de app rekent het met de eigen bibliotheek na en weigert bij verschil. Oudere pakketten plant de app zelf.
+// Eenmaal vastgelegd: hervatten plant niet opnieuw.
+// =====================================================================================================
+const dagLengte = d => { const L = d.cps[d.cps.length - 1]; return L.cumPath != null ? L.cumPath : L.cumStraight; };
+function maakPlan(areas, radiusM) {
+  const days = Plan.maak(M.days, areas, VRIJ, M.plan ? M.planSeed : M.key);   // planner: seed = hash van de punten (zie planDag)
+  if (M.plan && Canon.hash(Plan.kern(days, M.days, areas, M.plan.libraryVersion)) !== Canon.hash(M.plan))
+    throw new Error("De opdrachten in deze app horen bij een andere versie dan die van de planner. Werk de app bij (open hem één keer met internet) of maak tochtpakket en kaartbladen opnieuw.");
+  const plan = { tripId: M.tripId, revision: M.revision, routeHash: M.routeHash, libraryVersion: LIB_VERSIE, areas, radiusM, days };
+  plan.planId = Canon.sha256Hex(Canon.canon(plan)).slice(0, 16);
+  return plan;
+}
+const assignmentId = (dag, i, moment) => `${M.days[dag].dayId}:${i}:${moment}`;
+
+// =====================================================================================================
+// Toestand en stappen
+// S = { key, fase: voor|klaar|onder|check|stap|dag|einde, areas, radius, details, plan, dag, doel, vertrokken,
+//       days: [{ status: nieuw|bezig|afgerond|ingekort, start, eind, cp: { i: {status, tijd, d?, acc?} }, pauzes: { pzKey: {status, start?, eind?} } }],
+//       voorspel, terugblik, onderweg, stap, stappen, oefLog, tocht: null|afgerond|ingekort }
+// =====================================================================================================
+const dagS = () => S.days[S.dag], dagM = () => M.days[S.dag];
+function nieuweToestand() {
+  return { key: M.key, fase: "voor", areas: [], radius: 25, details: false, plan: null, dag: 0, doel: 1, vertrokken: null,
+    days: M.days.map(() => ({ status: "nieuw", start: null, eind: null, cp: {}, pauzes: {} })),   // pauzes: na het plannen, één per geplande pauze
+    voorspel: null, terugblik: null, onderweg: null, stap: null, stappen: [], oefLog: [], tocht: null };
+}
+// welke pauzes zijn bij aankomst op punt i van de huidige dag aan de beurt: open én gepland bij i of eerder (doorgeschoven)
+function pauzesAanDeBeurt(i) {
+  const pd = S.plan.days[S.dag], st = dagS().pauzes;
+  return pd.pauses.filter(p => (st[pzKey(p, pd.dayId)] || {}).status === "open" && p.cpIndex != null && p.cpIndex <= i).sort((a, b) => a.cpIndex - b.cpIndex);
+}
+function stappenBijAankomst(i) {
+  const st = [], a = (S.plan.days[S.dag].assign || {})[i] || {}, last = dagM().cps.length - 1;
+  if (S.voorspel && S.voorspel.dag === S.dag && S.voorspel.naar === i) st.push({ t: "tijd" });
+  if (S.terugblik && S.terugblik.dag === S.dag && S.terugblik.naar === i) st.push({ t: "terugblik" });
+  if (a.aankomst) st.push({ t: "oef", id: a.aankomst, i, moment: "aankomst" });
+  for (const p of pauzesAanDeBeurt(i)) st.push({ t: "pauze", kind: p.kind, key: pzKey(p, dagM().dayId), oef: p.cpIndex === i ? a.pauze || null : null });
+  if (i === last) st.push({ t: "dagEinde", status: "afgerond" });
+  else st.push(...stappenBijVertrek(i));
+  return st;
+}
+function stappenBijVertrek(i) {
+  const a = (S.plan.days[S.dag].assign || {})[i] || {}, st = [];
+  if (a.vertrek) st.push({ t: "oef", id: a.vertrek, i, moment: "vertrek" });
+  st.push({ t: "vertrek", i });
+  return st;
+}
+// volgende stap tonen; "vertrek" en "terug" worden direct verwerkt
+async function volgendeStap() {
+  const s = S.stappen[0];
+  const na = ok => { if (ok) toon(); else laatsteActie = volgendeStap; };   // na een opslagfout niet zelf opnieuw proberen
+  if (!s || s.t === "terug") return na(await doe(() => { S.stappen.shift(); S.stap = null; S.fase = "onder"; }));
+  if (s.t === "vertrek") {
+    const nextOnderweg = ((S.plan.days[S.dag].assign || {})[s.i] || {}).onderweg || null;
+    return na(await doe(() => { S.stappen.shift(); S.doel = s.i + 1; S.vertrokken = nu(); S.fase = "onder"; S.stap = null; S.onderweg = nextOnderweg; }));
+  }
+  if (s.t === "dagEinde") return dagAfsluiten(s.status);
+  na(await doe(() => { S.stappen.shift(); S.stap = s; S.fase = "stap"; }));
+}
+
+// =====================================================================================================
+// Aankomstcontrole (besluit 19-10-2026): automatisch alleen bij een meting van hooguit 30 s oud, afstand <= R en
+// gemelde nauwkeurigheid <= R. Anders geen automatische bevestiging; zelf bevestigen ("Ik herken het gemarkeerde punt")
+// en overslaan blijven altijd mogelijk. Meten stopt na 12 s. Een meting hoort bij één context (dag, doel, sessie):
+// een vertraagd antwoord voor een andere context wordt genegeerd.
+// =====================================================================================================
+const MAX_LEEFTIJD_MS = 30000, MEET_MS = 12000;
+let meetSessie = 0;
+function meet() {
+  return new Promise(resolve => {
+    if (!("geolocation" in navigator)) return resolve({ fout: "Deze telefoon geeft geen locatie aan de browser." });
+    let best = null, klaar = false, w = null;
+    const stop = res => { if (klaar) return; klaar = true; if (w != null) navigator.geolocation.clearWatch(w); clearTimeout(h); resolve(res); };
+    w = navigator.geolocation.watchPosition(p => {
+      if (Date.now() - p.timestamp > MAX_LEEFTIJD_MS) return;
+      const f = { ll: [p.coords.latitude, p.coords.longitude], acc: p.coords.accuracy, ts: p.timestamp };
+      if (!best || f.acc < best.acc) best = f;
+      if (f.acc <= 10) stop(best);
+    }, e => stop(best || { fout: e.code === 1 ? "Locatie niet toegestaan." : "Geen GPS-positie gevonden." }),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: MEET_MS });
+    const h = setTimeout(() => stop(best || { fout: "Geen verse GPS-positie gevonden." }), MEET_MS);
+  });
+}
+function beoordeel(fix, punt, R) {
+  if (!fix || fix.fout) return { uitkomst: "geen", fout: fix && fix.fout };
+  if (Date.now() - fix.ts > MAX_LEEFTIJD_MS) return { uitkomst: "geen", fout: "GPS-positie is te oud." };
+  const d = dist(fix.ll, [punt.lat, punt.lon]), a = fix.acc;
+  if (d <= R && a <= R) return { uitkomst: "ja", d, a };
+  if (a > R) return { uitkomst: "onzeker", d, a };
+  return { uitkomst: "nee", d, a };
+}
+let meting = null;
+async function check() {
+  const dag = S.dag, i = S.doel, p = dagM().cps[i], sessie = ++meetSessie;
+  S.fase = "check";   // tijdelijk scherm; niet bewaard: na heropenen ben je gewoon onderweg (geen halve meting)
+  scherm("vCheck");
+  $("ckNr").textContent = p.nr; $("ckMsg").textContent = "Even stilstaan…"; $("ckDetail").textContent = ""; $("ckHand").textContent = `Ja, ik sta bij punt ${p.nr}`;
+  ["ckOpnieuw", "ckHand", "ckSkip"].forEach(b => $(b).classList.add("hidden"));
+  const fix = await meet();
+  if (sessie !== meetSessie || S.fase !== "check" || S.dag !== dag || S.doel !== i) return;   // intussen iets anders gedaan
+  const b = beoordeel(fix, p, S.radius);
+  meting = { b, dag, i };
+  $("ckDetail").textContent = S.details && b.d != null ? `Afstand tot punt ${Math.round(b.d)} m, GPS-nauwkeurigheid ±${Math.round(b.a)} m, grens ${S.radius} m.` : "";
+  if (b.uitkomst === "ja") return aankomst(i, "gps", b);
+  ["ckOpnieuw", "ckHand", "ckSkip"].forEach(x => $(x).classList.remove("hidden"));
+  $("ckMsg").textContent = b.uitkomst === "onzeker" ? "De GPS is nu te onnauwkeurig." : b.uitkomst === "nee" ? "Volgens de GPS ben je er nog niet." : "Geen GPS-positie.";
+}
+const aankomst = actie(async (i, hoe, b) => {
+  const P = dagM().cps, dag = S.dag;
+  const ok = await doe(() => {
+    dagS().cp[i] = { status: hoe, tijd: nu(), d: b && b.d != null ? Math.round(b.d) : null, acc: b && b.a != null ? Math.round(b.a) : null };
+    S.onderweg = null;
+    S.stappen = stappenBijAankomst(i);
+    S.fase = "stap"; S.stap = null;
+  }, [{ type: "CheckpointReached", payload: { dayId: M.days[dag].dayId, checkpointId: P[i].id, method: hoe === "gps" ? "gps" : "manual", radiusM: S.radius,
+    distanceM: b && b.d != null ? Math.round(b.d) : undefined, accuracyM: b && b.a != null ? Math.round(b.a) : undefined } }]);
+  if (!ok) return toon();
+  if (hoe === "gps") toast(`Aangekomen bij punt ${P[i].nr}.`);
+  volgendeStap();
+});
+const overslaan = actie(async () => {
+  const dag = S.dag, i = S.doel, P = dagM().cps, last = P.length - 1;
+  const ok = await doe(() => {
+    dagS().cp[i] = { status: "overgeslagen", tijd: nu() };
+    // tijdvoorspelling naar dit punt: geannuleerd, niet beoordeeld
+    if (S.voorspel && S.voorspel.dag === dag && S.voorspel.naar === i) { S.oefLog.push({ dag, nr: P[i].nr, oef: "a-tijd", status: "geannuleerd", tijd: nu() }); S.voorspel = null; }
+    if (S.terugblik && S.terugblik.dag === dag && S.terugblik.naar === i) { S.oefLog.push({ dag, nr: P[i].nr, oef: S.terugblik.id, status: "geannuleerd", tijd: nu() }); S.terugblik = null; }
+    S.onderweg = null;
+    if (i === last) { S.stappen = [{ t: "dagEinde", status: "afgerond" }]; S.fase = "stap"; S.stap = null; }
+    else { S.doel = i + 1; S.vertrokken = nu(); S.fase = "onder"; S.stap = null; S.stappen = []; }
+  }, [{ type: "CheckpointSkipped", payload: { dayId: M.days[dag].dayId, checkpointId: P[i].id } }]);
+  if (!ok) return toon();
+  if (i === last) return volgendeStap();
+  toast(`Punt ${P[i].nr} overgeslagen. Op naar punt ${P[i + 1].nr}.`);
+  toon();
+});
+const armed = {};
+function bevestig(k, msg) {
+  if (Date.now() - (armed[k] || 0) < 4000) { armed[k] = 0; return true; }
+  armed[k] = Date.now(); toast(msg); return false;
+}
+
+// =====================================================================================================
+// Oefeningen
+// =====================================================================================================
+function vergelijk(o, i, inv) {
+  const P = dagM().cps, p = P[i], hoek = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180);
+  const oordeel = (fout, goed, bijna) => fout <= goed ? "goed" : fout <= bijna ? "bijna" : "fout";
+  switch (o.controle) {
+    case "rd": {
+      const f = Math.hypot(inv[0] - p.rd[0], inv[1] - p.rd[1]);
+      return { oordeel: oordeel(f, 100, 250), tekst: `x ${rdKm(p.rd[0])}, y ${rdKm(p.rd[1])} · jij ${Math.round(f)} m ernaast` };
+    }
+    case "afstand": {
+      const m = p.next.straightM, f = Math.abs(inv[0] - m);
+      return { oordeel: oordeel(f, Math.max(100, m * 0.1), Math.max(250, m * 0.25)), tekst: `${m} m · jij ${Math.round(inv[0])} m` };
+    }
+    case "kompas": {
+      const k = p.next.mag, f = hoek(inv[0], k);
+      return { oordeel: oordeel(f, 5, 10), tekst: `Kompaskoers ${fmtDeg(k)} · jij ${fmtDeg(inv[0])}`,
+        reken: `Op de kaart ${fmtDeg(p.next.grid)}, min de GM-hoek wordt ${fmtDeg(k)}.` };
+    }
+    case "terug": {
+      const k = norm(P[i - 1].next.mag + 180), f = hoek(inv[0], k);
+      return { oordeel: oordeel(f, 5, 10), tekst: `Koers terug ${fmtDeg(k)} · jij ${fmtDeg(inv[0])}`,
+        reken: `Heen was ${fmtDeg(P[i - 1].next.mag)}; terug is 180° anders.` };
+    }
+    case "overslaan": {
+      if (!p.skip) return { oordeel: "niet beoordeelbaar", tekst: "Geen koers naar dat punt in dit pakket." };
+      const k = p.skip.mag, f = hoek(inv[0], k);
+      return { oordeel: oordeel(f, 5, 10), tekst: `Koers naar punt ${P[i + 2].nr} ${fmtDeg(k)} · jij ${fmtDeg(inv[0])}`,
+        reken: `Op de kaart ${fmtDeg(p.skip.grid)}, min de GM-hoek wordt ${fmtDeg(k)}.` };
+    }
+    case "zon": {
+      // vandaag, op dit punt; zelfde formule als de noodpagina
+      const onder = zonOnder(new Date(), p.lat, p.lon, -0.833), schemer = zonOnder(new Date(), p.lat, p.lon, -6);
+      if (!onder) return { oordeel: "niet beoordeelbaar", tekst: "Zonsondergang niet te berekenen." };
+      const echt = onder.getHours() * 60 + onder.getMinutes(), f = Math.abs(inv[0] - echt), tijd = mn => `${Math.floor(mn / 60)}:${String(mn % 60).padStart(2, "0")}`;
+      return { oordeel: oordeel(f, 15, 30), tekst: `Zon onder om ${tijd(echt)} · jij ${tijd(inv[0])}`,
+        reken: schemer ? `Tot ongeveer ${schemer.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })} is het nog schemerig licht.` : "" };
+    }
+    case "schaduw": {
+      // je schaduw wijst van de zon af; je kompas wijst naar magnetisch noord, dus de declinatie (oost positief) gaat eraf
+      const z = zonStand(new Date(), p.lat, p.lon);
+      if (z.hoogte < 3) return { oordeel: "niet beoordeelbaar", tekst: "De zon staat te laag om te beoordelen." };
+      const decl = isNum(M.decl) ? M.decl : 2.915 + 0.31 * (p.lon - 5.39), k = norm(z.az + 180 - decl), f = hoek(inv[0], k);
+      return { oordeel: oordeel(f, 10, 20), tekst: `Schaduw ${fmtDeg(k)} · jij ${fmtDeg(inv[0])}`,
+        reken: `Zon op ${fmtDeg(z.az)}, schaduw dus ${fmtDeg(z.az + 180)} (ware richting), min ${decl.toFixed(1).replace(".", ",")}° declinatie.` };
+    }
+    case "afgelegd": {
+      const m = p.cumStraight, f = Math.abs(inv[0] * 1000 - m);
+      return { oordeel: oordeel(f, m * 0.1, m * 0.2), tekst: `${fmtKm(m)} km · jij ${String(inv[0]).replace(".", ",")} km` };
+    }
+  }
+  return null;
+}
+const INVOER = {
+  rd: [["x (oost)", "bijv. 197,51"], ["y (noord)", "bijv. 493,72"]],
+  afstand: [["meter", "bijv. 1800"]],
+  kompas: [["graden", "0–359"]],
+  terug: [["graden", "0–359"]],
+  overslaan: [["graden", "0–359"]],
+  zon: [["tijd", "bijv. 17,05"]],
+  schaduw: [["graden", "0–359"]],
+  oog: [["meter (schatting)", "bijv. 150"]],
+  afgelegd: [["km", "bijv. 7,5"]],
+  tijd: [["minuten", "bijv. 30"]],
+  positie: [["x (oost)", "bijv. 197,51"], ["y (noord)", "bijv. 493,72"]],
+};
+const getal = v => parseFloat(String(v).replace(",", "."));
+function knoppen() {
+  const kn = $("stKnoppen"); kn.innerHTML = "";
+  return (txt, cls, fn) => { const b = document.createElement("button"); b.textContent = txt; if (cls) b.className = cls; b.onclick = fn; kn.appendChild(b); return b; };
+}
+function bronTekst(o) {
+  const b = (o.bronnen || []).map(x => `${x.organisatie || ""}${x.titel ? ` — ${x.titel}` : ""}${x.onderdeel ? ` (${x.onderdeel})` : ""}`).filter(Boolean);
+  return b.length ? `<p class="muted" style="font-size:12px">Bron: ${b.map(esc).join("; ")}</p>` : "";
+}
+// vertrekopdracht waarvan de zelfcontrole pas na de etappe kan: die vraag komt bij het volgende punt
+const terugblikLater = o => o.moment === "vertrek" && o.controle === "zelf" && !!o.zelfcheck;
+function toonOefening(s) {
+  const o = OEF[s.id], P = dagM().cps, p = P[s.i];
+  const kop = { aankomst: `Opdracht bij punt ${p.nr}`, vertrek: "Voor je vertrekt", onderweg: `Onderweg naar punt ${p.nr + 1}`, pauze: "Tijdens de pauze" }[o.moment] || "";
+  const nrs = t => metNrs(t, p.nr);
+  // kort en bondig (besluit 24-10-2026): één zin; stappen en uitleg alleen als je erom vraagt
+  let h = `<p class="muted"><span class="ster" aria-hidden="true">★</span> ${esc(kop)}</p><h2>${esc(o.titel)}</h2>` +
+    (o.kort ? `<p class="kort">${esc(nrs(o.kort))}</p>` : `<ol>${o.opdracht.map(t => `<li>${esc(t)}</li>`).join("")}</ol>`);
+  const velden = INVOER[o.controle];
+  if (velden) h += velden.map(([l, ph], k) => `<label class="field"><span>${esc(l)}</span><input type="text" inputmode="decimal" id="inv${k}" placeholder="${esc(ph)}" autocomplete="off"></label>`).join("");
+  if (o.kort && o.hoe) h += `<details id="hoe"><summary>Hoe ook alweer?</summary><ol>${o.hoe.map(t => `<li>${esc(nrs(t))}</li>`).join("")}</ol></details>`;
+  h += `<div id="uitslag" class="hidden" style="display:flex;flex-direction:column;gap:8px"></div>`;
+  $("stCard").innerHTML = h;
+  const knop = knoppen(), aId = assignmentId(S.dag, s.i, o.moment);
+  const klaar = actie(async (status, extra = {}, mut = null) => {
+    if (!zelfdeStap(S.stap, s)) return;   // al afgehandeld (dubbele tik)
+    const ok = await doe(() => {
+      if (mut) mut();
+      S.oefLog.push({ dag: S.dag, nr: p.nr, oef: o.id, moment: o.moment, status, tijd: nu(), ...extra });
+      if (s.terug) { S.fase = "onder"; S.stap = null; } else S.stap = null;
+    }, [status === "overgeslagen" ? { type: "ExerciseSkipped", payload: { assignmentId: aId, templateId: o.id } }
+       : { type: "ExerciseAnswered", payload: { assignmentId: aId, templateId: o.id, result: status, input: extra.antwoord } }]);
+    if (!ok) return;
+    if (s.terug) return toon();
+    await volgendeStap();
+  });
+  // geen bronnen op de telefoon: die staan in de bibliotheek
+  const waarom = (extra = "") => `<details><summary>Waarom?</summary><p class="muted" style="margin-top:6px">${extra ? esc(extra) + " " : ""}${esc(nrs(o.waarom || o.uitleg))}</p></details>`;
+  // na het antwoord alleen de uitslag: opdracht, invulvelden en keuzes weg
+  const toonUitslag = (res, antwoord) => {
+    const kleur = { goed: "ok", fout: "warn" }[res.oordeel] || "", woord = { goed: "Goed", bijna: "≈ Bijna", fout: "✗ Nog niet" }[res.oordeel] || "";
+    $("stCard").querySelectorAll(".kort, .field, #hoe, ol").forEach(e => e.remove());
+    const u = $("uitslag"); u.classList.remove("hidden");
+    u.innerHTML = `${woord ? `<p class="${kleur} uitslag">${woord}</p>` : ""}<p>${esc(res.tekst)}</p>${waarom(res.reken)}`;
+    const k2 = knoppen();
+    k2("Verder", "go", () => klaar(res.oordeel, { antwoord }));
+  };
+  if (o.controle === "zelf" && terugblikLater(o)) {
+    // de zelfcontrole gaat over de etappe die nog komt: die vraag pas bij het volgende punt
+    $("stCard").insertAdjacentHTML("beforeend", `<p class="muted">Bij punt ${p.nr + 1} vraag ik hoe het ging.</p>` + waarom());
+    const dag = S.dag;
+    knop("Klaar, ik ga lopen", "go", () => klaar("voorbereid", {}, () => { S.terugblik = { dag, naar: s.i + 1, id: o.id }; }));
+    knop("Kan hier niet", "ghost", () => klaar("niet uitvoerbaar"));
+  } else if (o.controle === "zelf") {
+    if (o.zelfcheck) $("stCard").insertAdjacentHTML("beforeend", `<p><b>${esc(nrs(o.zelfcheck))}</b></p>`);
+    $("stCard").insertAdjacentHTML("beforeend", waarom());
+    knop("Lukte", "go", () => klaar("lukte"));
+    knop("Nog oefenen", "", () => klaar("nog oefenen"));
+    knop("Kan hier niet", "ghost", () => klaar("niet uitvoerbaar"));
+  } else if (o.controle === "tijd") {
+    $("stCard").insertAdjacentHTML("beforeend", waarom());
+    knop("Bewaar", "go", async () => {
+      const m = getal($("inv0").value);
+      if (!(m > 0)) return toast("Vul een aantal minuten in.");
+      const dag = S.dag;
+      await klaar("voorspeld", { antwoord: [m] }, () => { S.voorspel = { dag, naar: s.i + 1, min: m }; });   // samen bewaard of samen niet
+    });
+  } else if (o.controle === "keuze") {
+    // meerkeuze: één objectief juist antwoord
+    o.opties.forEach((t, k) => knop(t, "", () => toonUitslag(k === o.juist ? { oordeel: "goed", tekst: o.opties[o.juist] } : { oordeel: "fout", tekst: `Het is: ${o.opties[o.juist]}` }, [k])));
+  } else if (o.controle === "daglicht") {
+    // eigen tempo van vandaag (pauzes meegeteld) tegen het einde van de schemering bij het eindpunt
+    const L = P[P.length - 1], ds = dagS(), nuT = new Date();
+    const gedaan = p.cumPath != null && L.cumPath != null ? p.cumPath : p.cumStraight * 1.25, totaal = p.cumPath != null && L.cumPath != null ? L.cumPath : L.cumStraight * 1.25;
+    const minuten = ds.start ? (nuT - new Date(ds.start)) / 60000 : 0;
+    const tijd = d => d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+    const antwoord = ja => {
+      const donker = zonOnder(nuT, L.lat, L.lon, -6);
+      if (!donker || minuten < 15 || gedaan < 1000) return toonUitslag({ oordeel: "niet beoordeelbaar", tekst: "Nog te weinig gelopen om je tempo te kennen." }, [ja ? 1 : 0]);
+      const eta = new Date(nuT.getTime() + (totaal - gedaan) / (gedaan / minuten) * 60000), marge = (donker - eta) / 60000, haalt = marge >= 0;
+      toonUitslag({ oordeel: ja === haalt ? "goed" : Math.abs(marge) <= 10 ? "bijna" : "fout",
+        tekst: `${haalt ? "Ja" : "Nee"}: je bent rond ${tijd(eta)} bij punt ${L.nr}, donker om ${tijd(donker)}`,
+        reken: `Je tempo vandaag: ${(gedaan / minuten * 0.06).toFixed(1).replace(".", ",")} km/u, pauzes meegeteld. Nog ${fmtKm(totaal - gedaan)} km.` }, [ja ? 1 : 0]);
+    };
+    knop("Ja, ik haal het", "", () => antwoord(true));
+    knop("Nee, dat wordt krap", "", () => antwoord(false));
+  } else if (o.controle === "oog") {
+    // geschatte afstand; de GPS meet de rechte lijn van hier tot het ding
+    const meetOog = async knopEl => {
+      knopEl.disabled = true; const t = knopEl.textContent; knopEl.textContent = "GPS meten…";
+      const stap = S.stap, fix = await meet();
+      if (!zelfdeStap(S.stap, stap) || S.fase !== "stap") return null;
+      if (!fix || fix.fout || Date.now() - fix.ts > MAX_LEEFTIJD_MS || fix.acc > 15) { knopEl.disabled = false; knopEl.textContent = t; toast(`GPS te onzeker${fix && fix.acc ? ` (±${Math.round(fix.acc)} m)` : ""}. Probeer opnieuw of sla over.`); return null; }
+      return fix;
+    };
+    const start = knop("Start", "go", async () => {
+      const schat = getal($("inv0").value);
+      if (!(schat > 0)) return toast("Vul eerst je schatting in.");
+      const a = await meetOog(start); if (!a) return;
+      $("stCard").querySelectorAll(".field").forEach(e => e.remove());
+      $("stCard").querySelector(".kort").textContent = `Je schat ${Math.round(schat)} m. Loop er recht naartoe en tik Hier.`;
+      const k2 = knoppen();
+      const hier = k2("Hier", "go", async () => {
+        const b = await meetOog(hier); if (!b) return;
+        const d = dist(a.ll, b.ll), f = Math.abs(schat - d) / Math.max(d, 1);
+        toonUitslag({ oordeel: f <= 0.2 ? "goed" : f <= 0.35 ? "bijna" : "fout", tekst: `${Math.round(d)} m · jij ${Math.round(schat)} m`, reken: `GPS ±${Math.round(Math.max(a.acc, b.acc))} m.` }, [Math.round(schat), Math.round(d)]);
+      });
+      k2("Sla over", "ghost", () => klaar("overgeslagen"));
+    });
+  } else if (o.controle === "gelopen") {
+    // twee GPS-metingen, bij Start en bij Stop: de rechte afstand ertussen is wat je liep
+    const meetGoed = async knopEl => {
+      knopEl.disabled = true; const tekst = knopEl.textContent; knopEl.textContent = "GPS meten…";
+      const stap = S.stap, fix = await meet();
+      if (!zelfdeStap(S.stap, stap) || S.fase !== "stap") return null;
+      if (!fix || fix.fout || Date.now() - fix.ts > MAX_LEEFTIJD_MS || fix.acc > 15) {
+        knopEl.disabled = false; knopEl.textContent = tekst;
+        toast(`GPS te onzeker${fix && fix.acc ? ` (±${Math.round(fix.acc)} m)` : ""}. Probeer opnieuw of sla over.`); return null;
+      }
+      return fix;
+    };
+    const start = knop("Start", "go", async () => {
+      const a = await meetGoed(start); if (!a) return;
+      $("stCard").querySelector(".kort").textContent = "Loop nu 100 m op je passen en tik Stop.";
+      const k2 = knoppen();
+      const stop = k2("Stop", "go", async () => {
+        const b = await meetGoed(stop); if (!b) return;
+        const d = dist(a.ll, b.ll), f = Math.abs(d - 100);
+        toonUitslag({ oordeel: f <= 20 ? "goed" : f <= 40 ? "bijna" : "fout", tekst: `Je liep ${Math.round(d)} m`, reken: `Rechte lijn tussen Start en Stop, GPS ±${Math.round(Math.max(a.acc, b.acc))} m.` }, [Math.round(d)]);
+      });
+      k2("Sla over", "ghost", () => klaar("overgeslagen"));
+    });
+  } else {
+    const ctrl = knop("Controleer", "go", async () => {
+      // zonsondergang: tijd als 17:05, 17.05 of 17,05 (decimaal toetsenbord); in minuten na middernacht
+      if (o.controle === "zon") {
+        const [u, m = "0"] = String($("inv0").value).trim().split(/[,.:]/), min = parseInt(u, 10) * 60 + parseInt(m.padEnd(2, "0").slice(0, 2), 10);
+        if (!Number.isFinite(min)) return toast("Vul een tijd in, bijvoorbeeld 17,05.");
+        return toonUitslag(vergelijk(o, s.i, [min]), [min]);
+      }
+      let inv = velden.map((_, k) => getal($("inv" + k).value));
+      // RD: de kaartrand toont km (197); "197,51" is dus 197510 m. Nederlandse RD-waarden in meters zijn altijd groter dan 1000.
+      if (o.controle === "rd" || o.controle === "positie") inv = inv.map(v => Number.isFinite(v) && v < 1000 ? Math.round(v * 1000) : v);
+      if (inv.some(v => !Number.isFinite(v))) return toast("Vul eerst je antwoord in.");
+      let res;
+      if (o.controle === "positie") {
+        ctrl.disabled = true; ctrl.textContent = "GPS meten…";
+        const stap = S.stap, fix = await meet();
+        if (!zelfdeStap(S.stap, stap) || S.fase !== "stap") return;   // oefening intussen overgeslagen of verlaten
+        // alleen beoordelen met een verse, nauwkeurige meting; onzekerheid NIET van de afwijking aftrekken
+        if (!fix || fix.fout || Date.now() - fix.ts > MAX_LEEFTIJD_MS || fix.acc > 25) res = { oordeel: "niet beoordeelbaar", tekst: `GPS te onzeker${fix && fix.acc ? ` (±${Math.round(fix.acc)} m)` : ""}: niet te beoordelen.` };
+        else {
+          const [x, y] = toRD(fix.ll[0], fix.ll[1]), f = Math.hypot(inv[0] - x, inv[1] - y);
+          res = { oordeel: f <= 100 ? "goed" : f <= 250 ? "bijna" : "fout", tekst: `Je zat ${Math.round(f)} m naast de GPS`, reken: `GPS: x ${rdKm(x)}, y ${rdKm(y)} (±${Math.round(fix.acc)} m).` };
+        }
+      } else res = vergelijk(o, s.i, inv);
+      toonUitslag(res, inv);
+    });
+    if (o.controle === "schaduw") knop("Geen zon", "ghost", () => klaar("niet uitvoerbaar"));
+  }
+  knop("Sla over", "ghost", () => klaar("overgeslagen"));
+}
+// RD in km zoals aan de kaartrand: 197512 -> "197,51"
+const rdKm = m => (m / 1000).toFixed(2).replace(".", ",");
+// korte telefoontekst met puntnummers: {hier}, {volgend}, {vorig}
+const metNrs = (t, nr) => String(t).replace(/\{hier\}/g, nr).replace(/\{volgend\}/g, nr + 1).replace(/\{daarna\}/g, nr + 2).replace(/\{vorig\}/g, nr - 1);
+// stand van de zon (SunCalc): azimut vanaf noord met de klok mee, en hoogte boven de horizon; nagerekend met NOAA (< 0,5°)
+function zonStand(date, lat, lon) {
+  const dayMs = 864e5, J1970 = 2440588, J2000 = 2451545, e = rad(23.4397), deg = r => r * 180 / Math.PI;
+  const d = date.valueOf() / dayMs - 0.5 + J1970 - J2000, lw = rad(-lon), phi = rad(lat);
+  const M = rad(357.5291 + 0.98560028 * d), C = rad(1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  const L = M + C + rad(102.9372) + Math.PI, dec = Math.asin(Math.sin(e) * Math.sin(L)), ra = Math.atan2(Math.sin(L) * Math.cos(e), Math.cos(L));
+  const H = rad(280.16 + 360.9856235 * d) - lw - ra;
+  return { az: norm(deg(Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi))) + 180),
+    hoogte: deg(Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H))) };
+}
+// zonsondergang (h = -0,833°) of einde burgerlijke schemer (h = -6°), offline; zelfde formule als de noodpagina (SunCalc)
+function zonOnder(date, lat, lon, h) {
+  const dayMs = 864e5, J1970 = 2440588, J2000 = 2451545, J0 = 0.0009, e = rad(23.4397);
+  const d = date.valueOf() / dayMs - 0.5 + J1970 - J2000, lw = rad(-lon), phi = rad(lat);
+  const n = Math.round(d - J0 - lw / (2 * Math.PI));
+  const approx = Ht => J0 + (Ht + lw) / (2 * Math.PI) + n;
+  const ds = approx(0), M = rad(357.5291 + 0.98560028 * ds);
+  const C = rad(1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  const Lsun = M + C + rad(102.9372) + Math.PI, dec = Math.asin(Math.sin(e) * Math.sin(Lsun));
+  const cosw = (Math.sin(rad(h)) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+  if (cosw < -1 || cosw > 1) return null;
+  const J = J2000 + approx(Math.acos(cosw)) + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * Lsun);
+  return new Date((J + 0.5 - J1970) * dayMs);
+}
+let pauzeTik = null;
+async function toonPauze(s) {
+  const key = s.key || (s.kind === "rust" ? null : s.kind);   // oudere stappen hadden alleen de soort
+  const pd = S.plan.days[S.dag], pz = key ? pd.pauses.find(p => pzKey(p, pd.dayId) === key) || null : null;
+  const min = pz && Number.isInteger(pz.durationMin) && pz.durationMin > 0 && pz.durationMin <= 120 ? pz.durationMin : (pz && PAUZE_MIN[pz.kind]) || 15;
+  const ev = () => ({ dayId: dagM().dayId, ...(pz ? { pauseId: pz.pauseId } : {}), kind: s.kind });
+  if (!s.start) {
+    const ok = await doe(() => { s.start = nu(); if (S.stap) S.stap.start = s.start; if (key && dagS().pauzes[key]) dagS().pauzes[key] = { status: "bezig", start: s.start }; },
+      [{ type: "PauseStarted", payload: ev() }]);
+    if (!ok) return;
+  }
+  const o = s.oef ? OEF[s.oef] : null;
+  $("stCard").innerHTML = `<h2>${pz ? `${pauzeNaam(pz, pd.pauses)} · ${min} min` : "Rust"}</h2>
+    ${pz && pz.cpIndex != null && dagM().cps[pz.cpIndex].rest ? `<p>${RUSTNAAM[dagM().cps[pz.cpIndex].rest.kind]} op ±${dagM().cps[pz.cpIndex].rest.m} m van punt ${dagM().cps[pz.cpIndex].nr}</p>` : ""}
+    ${s.kind === "lunch" ? `<p class="muted">Koken mag niet overal.</p>` : ""}
+    ${s.kind === "rust" ? "" : `<div class="timer" id="pzTimer"></div>`}${o ? `<p class="muted">Er hoort een korte opdracht bij.</p>` : ""}`;
+  const knop = knoppen();
+  const tik = () => { const t = $("pzTimer"); if (!t) return clearInterval(pauzeTik); const over = min * 60 - Math.round((Date.now() - new Date(s.start)) / 1000);
+    t.textContent = over > 0 ? `${Math.floor(over / 60)}:${String(over % 60).padStart(2, "0")}` : "Tijd!"; };
+  clearInterval(pauzeTik); tik(); pauzeTik = setInterval(tik, 1000);
+  if (o) knop("Pauze-opdracht", "", actie(async () => {
+    const ok = await doe(() => { S.stappen.unshift({ ...s, oef: null }); S.stap = { t: "oef", id: o.id, i: S.doel, moment: "pauze" }; });
+    if (ok) toonOefening(S.stap);
+  }));
+  knop("Klaar, verder", "go", actie(async () => {
+    if (!zelfdeStap(S.stap, s)) return;
+    clearInterval(pauzeTik);
+    const ok = await doe(() => { if (key && dagS().pauzes[key]) dagS().pauzes[key] = { status: "klaar", start: s.start, eind: nu() }; S.stap = null; },
+      [{ type: "PauseEnded", payload: ev() }]);
+    if (ok) volgendeStap();
+  }));
+  if (key) knop("Later", "ghost", actie(async () => {
+    if (!zelfdeStap(S.stap, s)) return;
+    clearInterval(pauzeTik);
+    // uitstellen: de pauze blijft open en komt bij het volgende punt terug; geen verlies van een andere open pauze
+    const ok = await doe(() => { dagS().pauzes[key] = { status: "open" }; S.stap = null; }, [{ type: "PauseDeferred", payload: ev() }]);
+    if (ok) volgendeStap();
+  }));
+}
+function toonTijd() {
+  const v = S.voorspel;
+  if (!v) return volgendeStap();
+  const aankomstTijd = (dagS().cp[v.naar] || {}).tijd || nu(), echt = minTussen(S.vertrokken, aankomstTijd);
+  const f = Math.abs(echt - v.min) / Math.max(v.min, 1);
+  const oordeel = f <= 0.15 ? "goed" : f <= 0.3 ? "bijna" : "fout";
+  const pauzeMin = Object.values(dagS().pauzes).filter(p => p.start && p.start >= S.vertrokken && p.start <= aankomstTijd).reduce((a, p) => a + minTussen(p.start, p.eind || aankomstTijd), 0);
+  $("stCard").innerHTML = `<h2>Hoe lang deed je erover?</h2>
+    <p class="${oordeel === "goed" ? "ok" : oordeel === "fout" ? "warn" : ""} uitslag">${oordeel === "goed" ? "Goed geschat" : oordeel === "bijna" ? "≈ Bijna" : echt > v.min ? "✗ Langer dan gedacht" : "✗ Sneller dan gedacht"}</p>
+    <p>${echt} min · jij ${Math.round(v.min)} min${pauzeMin ? ` (incl. ${pauzeMin} min pauze)` : ""}</p>`;
+  const knop = knoppen();
+  knop("Verder", "go", actie(async () => {
+    if (!S.voorspel || JSON.stringify(S.voorspel) !== JSON.stringify(v)) return;
+    const ok = await doe(() => { S.oefLog.push({ dag: S.dag, oef: "a-tijd", nr: dagM().cps[v.naar].nr, moment: "aankomst", status: oordeel, tijd: nu(), antwoord: [v.min], echt }); S.voorspel = null; S.stap = null; },
+      [{ type: "ExerciseAnswered", payload: { assignmentId: assignmentId(S.dag, v.naar, "terugblik"), templateId: "a-tijd", result: oordeel, input: [v.min] } }]);
+    if (ok) volgendeStap();
+  }));
+}
+
+// terugkijken op een vertrekopdracht (vangkenmerk, naderingspunt …) nu de etappe gelopen is
+function toonTerugblik() {
+  const t = S.terugblik, o = t ? OEF[t.id] : null, P = dagM().cps;
+  if (!o || t.dag !== S.dag || !P[t.naar]) return volgendeStap();
+  $("stCard").innerHTML = `<p class="muted">${esc(GEBIED[o.gebied].naam)} · terugkijken op punt ${P[t.naar].nr - 1} naar ${P[t.naar].nr}</p><h2>${esc(o.titel)}</h2>
+    <p><b>${esc(metNrs(o.zelfcheck, P[t.naar].nr - 1))}</b></p>`;
+  const knop = knoppen();
+  const klaar = status => actie(async () => {
+    if (!S.terugblik || JSON.stringify(S.terugblik) !== JSON.stringify(t)) return;   // al afgehandeld (dubbele tik)
+    const ok = await doe(() => { S.oefLog.push({ dag: S.dag, oef: o.id, nr: P[t.naar].nr, moment: "aankomst", status, tijd: nu() }); S.terugblik = null; S.stap = null; },
+      [{ type: "ExerciseAnswered", payload: { assignmentId: assignmentId(S.dag, t.naar, "terugblik"), templateId: o.id, result: status } }]);
+    if (ok) volgendeStap();
+  });
+  knop("Lukte", "go", klaar("lukte"));
+  knop("Nog oefenen", "", klaar("nog oefenen"));
+  knop("Weet ik niet", "ghost", klaar("niet beoordeelbaar"));
+}
+
+// --- dag en tocht afsluiten ---
+async function dagAfsluiten(status) {
+  const dag = S.dag, P = dagM().cps, laatste = Object.keys(dagS().cp).map(Number).sort((a, b) => b - a)[0];
+  const evs = [{ type: "DayEnded", payload: { dayId: M.days[dag].dayId, status: status === "afgerond" ? "completed" : "shortened", lastCheckpointId: laatste != null ? P[laatste].id : P[0].id } }];
+  const laatsteDag = dag === M.days.length - 1;
+  const tochtStatus = laatsteDag ? (status === "afgerond" && S.days.slice(0, dag).every(d => d.status === "afgerond") ? "afgerond" : "ingekort") : null;
+  if (tochtStatus) evs.push({ type: "TripEnded", payload: { status: tochtStatus === "afgerond" ? "completed" : "shortened" } });
+  const ok = await doe(() => {
+    dagS().status = status; dagS().eind = nu();
+    S.stappen = []; S.stap = null; S.voorspel = null; S.terugblik = null; S.onderweg = null; S.vertrokken = null;
+    if (tochtStatus) { S.tocht = tochtStatus; S.fase = "einde"; } else S.fase = "dag";
+  }, evs);
+  if (ok) toon();
+}
+const dagStoppen = actie(async () => { if (bevestig("dagstop", "Tik nog een keer om deze dag te stoppen (ingekort).")) await dagAfsluiten("ingekort"); });
+const tochtStoppen = actie(async () => {
+  if (!bevestig("stop", "Tik nog een keer om de hele tocht te beëindigen.")) return;
+  const evs = [], dag = S.dag;
+  const laatste = Object.keys(dagS().cp).map(Number).sort((a, b) => b - a)[0];
+  if (dagS().status === "bezig") evs.push({ type: "DayEnded", payload: { dayId: M.days[dag].dayId, status: "shortened", lastCheckpointId: dagM().cps[laatste != null ? laatste : 0].id } });
+  evs.push({ type: "TripEnded", payload: { status: "shortened" } });
+  const ok = await doe(() => { if (dagS().status === "bezig") { dagS().status = "ingekort"; dagS().eind = nu(); } S.tocht = "ingekort"; S.fase = "einde"; S.stappen = []; S.stap = null; }, evs);
+  if (ok) toon();
+});
+
+// =====================================================================================================
+// Schermen
+// =====================================================================================================
+const VIEWS = ["vLeeg", "vVoor", "vOnder", "vCheck", "vStap", "vDag", "vEind"];
+function scherm(id) { VIEWS.forEach(v => $(v).classList.toggle("hidden", v !== id)); window.scrollTo(0, 0); }
+function toon() {
+  toonOpslag();
+  if (!S) return toonLeeg();
+  ({ voor: toonVoor, klaar: toonOnder, onder: toonOnder, check: toonOnder, stap: toonStapScherm, dag: toonDag, einde: toonEinde }[S.fase] || toonOnder)();
+}
+async function toonLeeg() {
+  scherm("vLeeg");
+  const box = $("oudeTochten"), rij = [];
+  if (db) { const alle = await idb("toestand", "readonly", tx => req(tx.objectStore("toestand").getAll())); for (const t of alle) rij.push({ key: t.key, txt: t.S.titel || t.key, klaar: t.S.fase === "einde" }); }
+  // eerdere v1-voortgang (alleen lezen)
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("oefentocht:v1:") && !rij.some(r => r.key === "v1:" + k.slice(14))) { const t = JSON.parse(localStorage.getItem(k)); if (t && t.pakket) rij.push({ key: "legacy:" + k.slice(14), txt: `${t.pakket.naam} (eerste versie)`, klaar: t.fase === "einde" }); } } } catch (e) {}
+  box.classList.toggle("hidden", !rij.length);
+  box.innerHTML = rij.length ? `<p><b>Eerder geopend op dit toestel</b></p>` + rij.map(r => `<button class="ghost small" data-key="${esc(r.key)}">${esc(r.txt)}${r.klaar ? " · klaar" : ""}</button>`).join("") : "";
+  box.querySelectorAll("button").forEach(b => b.onclick = () => openBewaard(b.dataset.key));
+}
+function toonVoor() {
+  scherm("vVoor");
+  const d0 = M.days;
+  $("voNaam").textContent = M.title;
+  $("voId").textContent = M.printCode;
+  // waarschuwingen uit de planner horen bij de voorbereiding, niet op de telefoon
+  $("voInfo").innerHTML = d0.map(d => `Dag ${d.seq}${d.date ? ` · ${esc(new Date(d.date + "T12:00").toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" }))}` : ""} · ${fmtKm(dagLengte(d))} km`).join("<br>");
+  const beschikbaar = LEERGEBIEDEN.filter(g => VRIJ.some(o => o.gebied === g.id));
+  $("voGebKop").textContent = M.plan ? "Je oefent" : "Wat wil je oefenen?";
+  $("voGebUitleg").textContent = M.plan ? "" : "Kies er twee of drie.";
+  $("voGebUitleg").hidden = !!M.plan;
+  if (M.plan) $("voGebieden").innerHTML = M.plan.areas.length
+    ? `<p>${M.plan.areas.map(a => esc((GEBIED[a] || { naam: a }).naam)).join(", ")}</p>`
+    : `<p class="muted">Niets gekozen: alleen pauzes.</p>`;
+  else $("voGebieden").innerHTML = beschikbaar.length
+    ? beschikbaar.map(g => `<label class="chk"><input type="checkbox" value="${g.id}" ${S.areas.includes(g.id) ? "checked" : ""}> ${esc(g.naam)}</label>`).join("") +
+      ""
+    : `<p class="muted">Nog geen vrijgegeven oefeningen in deze versie. De tocht werkt wel: aankomstcontrole, pauzes en logboek.</p>`;
+  $("voRadius").value = S.radius;
+}
+async function offlineStatus() {
+  try {
+    const c = await caches.open("kompas-oefen-" + APP_VERSIE);
+    const mis = []; for (const f of APP_BESTANDEN) if (!(await c.match(new URL(f, location.href).href, { ignoreSearch: true }))) mis.push(f);
+    return mis.length ? "onvolledig" : "gereed";
+  } catch (e) { return "onbekend"; }
+}
+async function toonOnder() {
+  scherm("vOnder");
+  const d = dagM(), ds = dagS(), P = d.cps, gestart = ds.status === "bezig";
+  const datum = d.date ? new Date(d.date + "T12:00").toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" }) : "";
+  $("onKop").textContent = gestart ? `Dag ${d.seq} · punt ${P[S.doel].nr} van ${P.length}` : `Dag ${d.seq}${datum ? " · " + datum : ""}`;
+  $("onTochtNaam").textContent = M.title; $("onTochtCode").textContent = M.printCode;
+  ["onCheck", "onSkip", "onPauze"].forEach(x => $(x).classList.toggle("hidden", !gestart));
+  $("onStart").classList.toggle("hidden", gestart);
+  $("onDagStop").classList.toggle("hidden", !gestart);
+  $("onPauzeKeus").classList.add("hidden");
+  $("onDetails").checked = !!S.details;
+  $("onNood").classList.toggle("hidden", !d.nood); if (d.nood) $("onNood").href = d.nood;
+  const i = gestart ? S.doel : 1, p = P[i], vorig = P[i - 1];
+  // kort (besluit 24-10-2026): nummer, naam en wat er bij het punt wacht. Geen RD of afstand: die verklappen opdrachten.
+  const toonP = gestart ? p : P[0];
+  $("onNr").textContent = toonP.nr; $("onNaam").textContent = toonP.name;
+  $("onWaar").textContent = toonP.bladen && toonP.bladen.length ? `Kaartblad ${toonP.bladen[0]}` : "";   // bladen overlappen: het eerste is genoeg
+  $("onWacht").innerHTML = gestart ? watWacht(S.dag, i) : ""; $("onWacht").classList.toggle("hidden", !$("onWacht").innerHTML);
+  $("onSub").textContent = "";
+  if (!gestart) {
+    $("onLabel").textContent = "Begin bij";
+    $("onStart").textContent = `Start dag ${d.seq}`;
+    const off = await offlineStatus();
+    if (off === "onvolledig") $("onSub").textContent = "Nog niet offline: open de app één keer met internet.";
+  } else {
+    $("onLabel").textContent = "Op weg naar";
+    $("onCheck").textContent = `Ik ben bij punt ${p.nr}`;
+  }
+  // koers en afstand: per doel opnieuw verborgen, pas tonen op verzoek
+  const feitKey = `${S.dag}:${i}`;
+  if (toonOnder.feiten !== feitKey) { $("onFeiten").classList.add("hidden"); $("onFeitenKnop").classList.remove("hidden"); }
+  const n = vorig && vorig.next;
+  $("onFeitenKnop").classList.toggle("hidden", !n || !$("onFeiten").classList.contains("hidden"));
+  if (n) {
+    $("onKoersLabel").textContent = `Koers vanaf punt ${vorig.nr}`;
+    $("onKoers").innerHTML = `${fmtDeg(n.mag)} <small>magnetisch</small>`;
+    $("onAfstand").innerHTML = `${fmtKm(n.straightM)} <small>km</small>`;
+  }
+  const o = S.onderweg ? OEF[S.onderweg] : null;
+  $("onOpdracht").classList.toggle("hidden", !o || !gestart);
+  if (o) $("onOpdrTag").textContent = GEBIED[o.gebied].naam;
+  const pl = S.plan.days[S.dag];
+  $("onLijstKop").textContent = `Alle punten van dag ${d.seq}`;
+  $("onLijst").innerHTML = `<table class="pts">${P.map((p, i) => {
+    const s = (ds.cp[i] || {}).status;
+    const tag = s === "gps" ? `<span class="tag">bereikt</span>` : s === "handmatig" ? `<span class="tag">zelf bevestigd</span>` : s === "overgeslagen" ? `<span class="tag">overgeslagen</span>` : gestart && i === S.doel ? `<span class="tag">volgende</span>` : "";
+    const pz = pl.pauses.filter(x => x.cpIndex === i).map(x => `<span class="tag">${x.kind === "coffee" ? "koffie" : "lunch"}${(ds.pauzes[pzKey(x, pl.dayId)] || {}).status === "klaar" ? " ✓" : ""}</span>`).join("");
+    const km = p.cumPath != null ? `${fmtKm(p.cumPath)} km` : `${fmtKm(p.cumStraight)} km hb`;
+    return `<tr><td class="n">${p.nr}</td><td>${esc(p.name)}${tag}${pz}</td><td class="n">${km}</td></tr>`;
+  }).join("")}</table><p class="muted" style="font-size:13px;margin-top:6px">km = referentieroute vanaf de start${P[P.length - 1].cumPath == null ? "; hb = hemelsbreed" : ""}. Wat je werkelijk loopt kan afwijken.</p>`;
+}
+// wat er bij punt i wacht, met dezelfde tekens als op het kaartblad
+const TEKEN = {
+  opdracht: '<svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path d="M8 1.2L10 6L15 6.3L11.1 9.5L12.4 14.5L8 11.7L3.6 14.5L4.9 9.5L1 6.3L6 6Z" fill="#c8008c" stroke="#fff" stroke-width="1"/></svg>',
+  coffee: '<svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path d="M2.5 5H11V9.5A4.25 4.25 0 0 1 2.5 9.5Z" fill="#c8008c" stroke="#fff" stroke-width="1"/><path d="M11 6.2H12.2A2 2 0 0 1 12.2 10.2H11" fill="none" stroke="#c8008c" stroke-width="1.6"/></svg>',
+  lunch: '<svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path d="M11.1 8.5A4.6 4.6 0 1 1 1.9 8.5A4.6 4.6 0 1 1 11.1 8.5ZM10.6 7.6H15.2V9.4H10.6Z" fill="#c8008c" stroke="#fff" stroke-width="1"/></svg>',
+};
+function watWacht(dag, i) {
+  const pd = S.plan.days[dag], a = (pd.assign || {})[i] || {}, st = S.days[dag].pauzes, uit = [];
+  if (Object.keys(a).length) uit.push(`${TEKEN.opdracht} Opdracht`);   // zoals de ster op papier: elke opdracht bij dit punt
+  pd.pauses.filter(p => p.cpIndex === i && (st[pzKey(p, pd.dayId)] || {}).status === "open").forEach(p => uit.push(`${TEKEN[p.kind]} ${p.kind === "lunch" ? "Lunch" : "Koffie"}`));
+  return uit.join(" · ");
+}
+$("onFeitenKnop").onclick = () => { toonOnder.feiten = `${S.dag}:${dagS().status === "bezig" ? S.doel : 1}`; $("onFeiten").classList.remove("hidden"); $("onFeitenKnop").classList.add("hidden"); };
+$("onTochtKnop").onclick = () => { const open = $("onTocht").classList.toggle("hidden") === false; $("onTochtKnop").setAttribute("aria-expanded", String(open)); };
+// weergave: alleen op dit toestel (localStorage), niet in de tochtvoortgang
+try { $("onThema").value = localStorage.getItem("veldThema") || "systeem"; } catch (e) {}
+$("onThema").onchange = () => {
+  const t = $("onThema").value;
+  try { if (t === "systeem") localStorage.removeItem("veldThema"); else localStorage.setItem("veldThema", t); } catch (e) {}
+  if (t === "systeem") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+};
+function toonStapScherm() {
+  scherm("vStap");
+  const s = S.stap;
+  if (!s) return volgendeStap();
+  if (s.t === "oef") toonOefening(s);
+  else if (s.t === "pauze") toonPauze(s);
+  else if (s.t === "tijd") toonTijd();
+  else if (s.t === "terugblik") toonTerugblik();
+}
+function logTabel(dag) {
+  const label = { goed: "goed", bijna: "bijna", fout: "nog niet", lukte: "lukte", "nog oefenen": "nog oefenen", "niet uitvoerbaar": "niet uitvoerbaar", overgeslagen: "overgeslagen", "niet beoordeelbaar": "niet beoordeelbaar", geannuleerd: "geannuleerd" };
+  const rows = S.oefLog.filter(o => o.dag === dag && o.status !== "voorspeld" && o.status !== "voorbereid");
+  return `<p><b>Oefeningen dag ${dag + 1}</b></p><table class="pts">${rows.map(o => `<tr><td class="n">${esc(o.nr)}</td><td>${esc((OEF[o.oef] || {}).titel || o.oef)}</td><td class="n">${label[o.status] || esc(o.status)}</td></tr>`).join("") || "<tr><td>Geen.</td></tr>"}</table>`;
+}
+function dagSamenvatting(dag) {
+  const cp = Object.values(S.days[dag].cp), n = s => cp.filter(c => c.status === s).length;
+  const log = S.oefLog.filter(o => o.dag === dag && !["voorspeld", "voorbereid", "geannuleerd"].includes(o.status)), goed = log.filter(o => ["goed", "lukte"].includes(o.status)).length;
+  return `${n("gps") + n("handmatig")} punten bereikt${n("overgeslagen") ? `, ${n("overgeslagen")} overgeslagen` : ""}. Opdrachten: ${goed} van ${log.length} goed.`;
+}
+function toonDag() {
+  scherm("vDag");
+  const dag = S.dag, st = S.days[dag].status;
+  $("dgKop").textContent = `Dag ${dag + 1} ${st === "ingekort" ? "ingekort" : "afgerond"}`;
+  const pd = S.plan.days[dag], open = pd.pauses.filter(p => (S.days[dag].pauzes[pzKey(p, pd.dayId)] || {}).status !== "klaar").map(p => pauzeNaam(p, pd.pauses).toLowerCase());
+  $("dgTekst").textContent = dagSamenvatting(dag) + (open.length ? ` Niet genomen: ${open.length > 1 ? open.slice(0, -1).join(", ") + " en " + open[open.length - 1] : open[0]}.` : "") + (dag + 1 < M.days.length ? ` Morgen: de kaartbladen van dag ${dag + 2}.` : "");
+  $("dgLijst").innerHTML = logTabel(dag);
+  $("dgVolgende").textContent = `Dag ${dag + 2} klaarzetten`;
+}
+function toonEinde() {
+  scherm("vEind");
+  $("eiKop").textContent = S.tocht === "afgerond" ? "Tocht afgerond" : "Tocht ingekort";
+  $("eiTekst").textContent = M.days.map((d, k) => `Dag ${k + 1}: ${({ afgerond: "afgerond", ingekort: "ingekort", nieuw: "niet gelopen", bezig: "niet afgerond" })[S.days[k].status]}. ${S.days[k].status === "nieuw" ? "" : dagSamenvatting(k)}`).join(" ");
+  $("eiLijst").innerHTML = M.days.map((_, k) => logTabel(k)).join("");
+}
+
+// --- tochten openen ---
+async function bewaarPakket(pk) { await idb("pakketten", "readwrite", tx => { tx.objectStore("pakketten").put({ key: M.key, pakket: pk, kind: M.kind }); }); }
+async function opent(pk) {
+  const m = normaliseer(pk);
+  if (!db) throw dbFout || new Error("Geen opslag beschikbaar.");
+  const bestaand = await idb("toestand", "readonly", tx => req(tx.objectStore("toestand").get(m.key)));
+  M = m; PK = pk;
+  if (bestaand) { laad(bestaand); toast("Deze tocht stond al op dit toestel; je gaat verder waar je was."); }
+  else { S = nieuweToestand(); S.titel = M.title; geladenRev = volgendeRev = 0; }
+  await bewaarPakket(pk);
+  if (!(await doe(() => {}))) return;
+  toon();
+}
+// v1-voortgang uit localStorage overnemen (kopie; het origineel blijft staan)
+function vanV1(old) {
+  S = nieuweToestand(); S.titel = M.title;
+  S.areas = old.gebieden || []; S.radius = old.radius || 25; S.details = !!old.details;
+  if (!old.plan) return;
+  const kind = { koffie: "coffee", lunch: "lunch" };
+  const pauses = [], assign = {};
+  old.plan.forEach((pl, i) => {
+    if (pl.pauze && kind[pl.pauze] && !pauses.some(p => p.kind === kind[pl.pauze])) pauses.push({ pauseId: `d1-${kind[pl.pauze]}`, kind: kind[pl.pauze], durationMin: PAUZE_MIN[kind[pl.pauze]], cpIndex: i, checkpointId: M.days[0].cps[i].id });
+    for (const mo of ["aankomst", "vertrek", "onderweg"]) if (pl[mo]) (assign[i] = assign[i] || {})[mo] = pl[mo];
+    if (pl.pauzeOef) (assign[i] = assign[i] || {}).pauze = pl.pauzeOef;
+  });
+  for (const k of ["coffee", "lunch"]) if (!pauses.some(p => p.kind === k)) pauses.push({ pauseId: `d1-${k}`, kind: k, durationMin: PAUZE_MIN[k], cpIndex: null, checkpointId: null });
+  S.plan = { tripId: M.tripId, revision: 1, routeHash: null, libraryVersion: "v1", areas: S.areas, radiusM: S.radius, days: [{ dayId: "d1", pauses, assign }], planId: "v1-" + M.printCode };
+  const ds = S.days[0];
+  ds.pauzes = { coffee: { status: "open" }, lunch: { status: "open" } };   // v1 kende één koffie en één lunch
+  (old.log || []).forEach(l => { ds.cp[l.nr - 1] = { status: l.status, tijd: l.tijd, d: l.d ?? null, acc: l.acc ?? null }; });
+  (old.pauzes || []).forEach(p => { const k = kind[p.soort]; if (k) ds.pauzes[k] = { status: "klaar", start: p.start, eind: p.eind }; });
+  S.oefLog = (old.oefLog || []).map(o => ({ ...o, dag: 0 }));
+  if (old.gestart) { ds.status = "bezig"; ds.start = old.gestart; }
+  S.doel = old.doel || 1; S.vertrokken = old.vertrokken || null; S.onderweg = old.onderweg || null;
+  S.fase = old.fase === "voor" ? "voor" : old.fase === "einde" ? "einde" : old.gestart ? "onder" : "klaar";
+  if (old.fase === "einde") { ds.status = "afgerond"; S.tocht = "afgerond"; }
+}
+async function openBewaard(key) {
+  try {
+    if (key.startsWith("legacy:")) {
+      const old = JSON.parse(localStorage.getItem("oefentocht:v1:" + key.slice(7)));
+      M = normaliseer(old.pakket); PK = old.pakket;
+      const bestaand = await idb("toestand", "readonly", tx => req(tx.objectStore("toestand").get(M.key)));
+      if (bestaand) laad(bestaand); else { vanV1(old); geladenRev = volgendeRev = 0; }
+      await bewaarPakket(PK);
+      if (!(await doe(() => {}))) return;
+      return toon();
+    }
+    const [t, p] = await Promise.all([idb("toestand", "readonly", tx => req(tx.objectStore("toestand").get(key))), idb("pakketten", "readonly", tx => req(tx.objectStore("pakketten").get(key)))]);
+    if (!t || !p) return toast("Deze tocht is niet meer op dit toestel.");
+    M = normaliseer(p.pakket); PK = p.pakket; laad(t);
+    if (!(await doe(() => {}))) return;
+    toon();
+  } catch (e) { toast("Kan deze tocht niet openen: " + e.message); }
+}
+
+// =====================================================================================================
+// Synchronisatie met de Mac-dienst (zelfde adres als de app; zie mac/README.md). Automatisch na elke handeling,
+// bij openen, bij terugkeer naar de app en bij een online-signaal; alleen terwijl de app actief is.
+// Een gebeurtenis geldt pas als "op de Mac" als de Mac hem na zijn databasecommit bevestigt.
+// =====================================================================================================
+const SYNC = { api: null, bezig: false, fouten: 0, timer: null, laatsteOk: null, gezocht: 0, geweigerd: null };
+// 400/409/413/422: de Mac weigert deze gegevens; niet eindeloos herhalen maar zichtbaar maken (gegevens blijven op het toestel)
+class MacWeigert extends Error { constructor(code) { super(`Mac weigert (${code})`); this.code = code; } }
+const checkMac = r => { if ([400, 409, 413, 422].includes(r.status)) throw new MacWeigert(r.status); if (!r.ok) throw new Error(`Mac ${r.status}`); return r; };
+async function vindMac(nu_ = false) {
+  if (!nu_ && Date.now() - SYNC.gezocht < 60000) return;   // niet bij elke handeling opnieuw zoeken
+  SYNC.gezocht = Date.now();
+  try { const r = await fetch("../api/v1/status", { cache: "no-store" }); if (r.ok) { const j = await r.json(); if (j && j.schemaVersions && j.schemaVersions.includes(2)) SYNC.api = new URL("../api/v1/", location.href).href; } } catch (e) {}
+}
+async function onverzonden(key) {
+  if (!db) return [];
+  const all = await idb("events", "readonly", tx => req(tx.objectStore("events").index("trip").getAll(key)));
+  return all.filter(e => !e.synced).sort((a, b) => a.ev.deviceSequence - b.ev.deviceSequence);
+}
+async function sync(zoek = false) {
+  if (!S || !M || M.kind !== "v2" || SYNC.bezig) return toonOpslag();
+  if (SYNC.geweigerd && !zoek) return toonOpslag();   // pas opnieuw bij openen/terugkeer van de app
+  SYNC.geweigerd = null;
+  if (!SYNC.api) { await vindMac(zoek); if (!SYNC.api) return toonOpslag(); }
+  SYNC.bezig = true; clearTimeout(SYNC.timer);
+  try {
+    const metaKey = "sync:" + M.key, meta = (await idb("meta", "readonly", tx => req(tx.objectStore("meta").get(metaKey)))) || { k: metaKey };
+    const put = async (pad, body) => { checkMac(await fetch(SYNC.api + pad, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); };
+    if (!meta.pakket) { await put(`trips/${encodeURIComponent(M.tripId)}/revisions/${M.revision}`, PK); meta.pakket = true; }
+    if (S.plan && meta.plan !== S.plan.planId) { await put(`trips/${encodeURIComponent(M.tripId)}/plans/${S.plan.planId}`, S.plan); meta.plan = S.plan.planId; }
+    await idb("meta", "readwrite", tx => { tx.objectStore("meta").put(meta); });
+    for (let ronde = 0; ronde < 20; ronde++) {
+      const todo = (await onverzonden(M.key)).slice(0, 100);
+      if (!todo.length) break;
+      const r = await fetch(SYNC.api + `trips/${encodeURIComponent(M.tripId)}/events`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ events: todo.map(e => e.ev) }) });
+      checkMac(r);
+      const ok = new Set((await r.json()).acceptedEventIds || []);
+      await idb("events", "readwrite", tx => { const st = tx.objectStore("events"); for (const e of todo) if (ok.has(e.eventId)) st.put({ ...e, synced: 1 }); });
+      if (!ok.size) break;
+    }
+    SYNC.fouten = 0; SYNC.laatsteOk = nu();
+  } catch (e) {
+    if (e instanceof MacWeigert) { SYNC.geweigerd = e.code; return; }
+    SYNC.fouten++;
+    const wacht = [5, 15, 60][SYNC.fouten - 1] || 300;
+    SYNC.timer = setTimeout(sync, wacht * 1000);
+  } finally { SYNC.bezig = false; toonOpslag(); }
+}
+async function toonOpslag() {
+  const el = $("opslag");
+  if (!S || !M) return el.classList.add("hidden");
+  el.classList.remove("hidden");
+  if (!db) return el.textContent = "Opslag niet beschikbaar.";
+  const open = (await onverzonden(M.key)).length;
+  el.dataset.staat = SYNC.geweigerd ? "let" : "ok";   // bolletje amber als er iets aandacht vraagt; de tekst zegt wat
+  // gewoon "Bewaard" zolang er niets mis is; alleen een echt probleem krijgt uitleg
+  el.textContent = M.kind !== "v2" || !SYNC.api ? "Bewaard"
+    : SYNC.geweigerd ? `Bewaard op dit toestel, maar de Mac weigert de gegevens (${SYNC.geweigerd}). Deel je voortgang als bestand.`
+    : open ? "Bewaard · nog niet op de Mac" : "Bewaard · ook op de Mac";
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") sync(true); });
+window.addEventListener("online", () => sync(true));
+
+// --- export / herstel ---
+async function exporteer() {
+  const evs = M ? (await idb("events", "readonly", tx => req(tx.objectStore("events").index("trip").getAll(M.key)))).map(e => e.ev) : [];
+  const data = { formaat: "kompas-tocht-export", versie: 2, pakket: PK, toestand: S, gebeurtenissen: evs, gemaakt: nu() };
+  const naam = `${(M ? M.title : "tocht").replace(/[^\w\- ]+/g, "").replace(/\s+/g, "_")}_${M ? M.printCode : ""}.voortgang.json`;
+  const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" });
+  try {
+    const file = new File([blob], naam, { type: "application/json" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], title: naam }).catch(() => {});
+  } catch (e) {}
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = naam; a.click(); URL.revokeObjectURL(a.href);
+}
+
+// Terugzetten uit een export (A20; bewuste overdracht naar dit toestel). Het pakket wordt net zo streng gecontroleerd
+// als bij openen. Gebeurtenissen worden samengevoegd op eventId: niets van dit toestel verdwijnt, ook niet bij vervangen;
+// een vervangen toestand blijft als kopie in de opslag ("vervangen:<tocht>:<tijd>").
+function controleerExport(data) {
+  if (data.versie !== 2) throw new Error("onbekende exportversie");
+  const m = normaliseer(data.pakket);
+  const T = data.toestand;
+  if (!T || typeof T !== "object" || T.key !== m.key || !Array.isArray(T.days) || T.days.length !== m.days.length) throw new Error("voortgang hoort niet bij dit tochtpakket");
+  // het bestand komt van buiten de app: alle velden die de schermen gebruiken op vorm controleren, vóór er iets vervangen wordt
+  const obj = v => !!v && typeof v === "object" && !Array.isArray(v);
+  const isOef = id => isStr(id) && Object.prototype.hasOwnProperty.call(OEF, id);   // geen geërfde sleutels als "constructor"
+  if (!["voor", "klaar", "onder", "check", "stap", "dag", "einde"].includes(T.fase)) throw new Error("onbekende fase in de voortgang");
+  const dagOk = (d, k) => obj(d) && ["nieuw", "bezig", "afgerond", "ingekort"].includes(d.status) && obj(d.cp) && obj(d.pauzes)
+    && Object.entries(d.pauzes).every(([k, p]) => /^[a-z0-9]{1,16}$/.test(k) && obj(p) && isStr(p.status))
+    && Object.entries(d.cp).every(([i, c]) => /^\d+$/.test(i) && +i < m.days[k].cps.length && obj(c) && isStr(c.status));
+  if (!T.days.every(dagOk)) throw new Error("dagvoortgang is beschadigd");
+  if (T.plan != null) {
+    const P = T.plan;
+    if (!obj(P) || P.tripId !== m.tripId) throw new Error("oefenplan hoort bij een andere tocht");
+    if (!Array.isArray(P.days) || P.days.length !== m.days.length || !P.days.every((d, k) => obj(d) && obj(d.assign) && Array.isArray(d.pauses)
+      && d.pauses.every(p => obj(p) && ["coffee", "lunch"].includes(p.kind) && isStr(p.pauseId) && p.pauseId.startsWith(m.days[k].dayId + "-")
+        && (p.durationMin == null || (Number.isInteger(p.durationMin) && p.durationMin > 0 && p.durationMin <= 120))
+        && /^[a-z0-9]{1,16}$/.test(pzKey(p, m.days[k].dayId)) && Object.prototype.hasOwnProperty.call(T.days[k].pauzes, pzKey(p, m.days[k].dayId)) && (p.cpIndex === null || (Number.isInteger(p.cpIndex) && p.cpIndex >= 0 && p.cpIndex < m.days[k].cps.length)))
+      && Object.entries(d.assign).every(([i, x]) => /^\d+$/.test(i) && +i < m.days[k].cps.length && obj(x) && Object.values(x).every(isOef))))
+      throw new Error("oefenplan is beschadigd");
+    if (m.plan) {
+      const zelfdePunt = P.days.every((d, k) => d.pauses.every(p => p.checkpointId === (p.cpIndex == null ? null : m.days[k].cps[p.cpIndex].id)));
+      if (!zelfdePunt || !Array.isArray(P.areas) || Canon.hash(Plan.kern(P.days, m.days, P.areas, m.plan.libraryVersion)) !== Canon.hash(m.plan))
+        throw new Error("oefenplan in de voortgang wijkt af van het plan op de kaartbladen");
+    }
+  }
+  if (T.onderweg != null && !isOef(T.onderweg)) throw new Error("onbekende oefening in de voortgang");
+  if (T.terugblik != null && !(obj(T.terugblik) && T.terugblik.dag === T.dag && m.days[T.terugblik.dag] && Number.isInteger(T.terugblik.naar)
+    && T.terugblik.naar > 0 && T.terugblik.naar < m.days[T.terugblik.dag].cps.length && isOef(T.terugblik.id))) throw new Error("onbekende terugblik in de voortgang");
+  if (!Array.isArray(T.oefLog || []) || (T.oefLog || []).some(o => !obj(o) || !isNum(o.nr) || !isNum(o.dag) || !isStr(o.oef) || !isStr(o.status))) throw new Error("logboek is beschadigd");
+  // stand binnen de tocht: anders loopt het scherm bij elke start vast
+  const dag = T.dag, cps = Number.isInteger(dag) && m.days[dag] ? m.days[dag].cps.length : -1;
+  if (cps < 0 || !Number.isInteger(T.doel) || T.doel < 0 || T.doel > cps) throw new Error("dag of doel valt buiten de tocht");
+  const stapOk = s => s == null || (obj(s) && (s.id == null || isOef(s.id)) && (s.oef == null || isOef(s.oef)) && (s.i == null || (Number.isInteger(s.i) && s.i >= 0 && s.i < cps)));
+  if (!stapOk(T.stap) || !Array.isArray(T.stappen || []) || !(T.stappen || []).every(stapOk)) throw new Error("onbekende stap in de voortgang");
+  const evs = data.gebeurtenissen || [];
+  if (!Array.isArray(evs) || evs.some(e => !e || !isStr(e.eventId) || e.tripId !== m.tripId || !isStr(e.deviceId) || !isNum(e.deviceSequence))) throw new Error("gebeurtenissen horen niet bij deze tocht");
+  return { m, T, evs };
+}
+async function zetTerug(data, x, vervang) {
+  await idb(["pakketten", "toestand", "events", "meta"], "readwrite", async tx => {
+    const ts = tx.objectStore("toestand"), es = tx.objectStore("events"), meta = tx.objectStore("meta");
+    const huidig = await req(ts.get(x.m.key));
+    // gebeurtenissen altijd samenvoegen (op eventId), ook als dit toestel zijn eigen stand houdt
+    for (const ev of x.evs) { if (!(await req(es.get(ev.eventId)))) es.put({ eventId: ev.eventId, tripKey: x.m.key, synced: 0, ev }); }
+    if (huidig && !vervang) return;
+    if (huidig) meta.put({ k: `vervangen:${x.m.key}:${nu()}`, S: huidig.S, rev: huidig.rev || 0 });
+    tx.objectStore("pakketten").put({ key: x.m.key, pakket: data.pakket, kind: x.m.kind });
+    ts.put({ key: x.m.key, S: x.T, rev: (huidig ? huidig.rev || 0 : 0) + 1 });
+    meta.put({ k: "actief", key: x.m.key });
+  });
+}
+let herstelBezig = null;
+async function herstel(data) {
+  const x = controleerExport(data);
+  const huidig = await idb("toestand", "readonly", tx => req(tx.objectStore("toestand").get(x.m.key)));
+  if (huidig && Canon.canon(huidig.S) !== Canon.canon(x.T)) {
+    herstelBezig = { data, x };
+    const hier = (huidig.S.oefLog || []).length + Object.values(huidig.S.days || {}).reduce((s, d) => s + Object.keys(d.cp || {}).length, 0);
+    const daar = (x.T.oefLog || []).length + x.T.days.reduce((s, d) => s + Object.keys(d.cp || {}).length, 0);
+    $("herstelTekst").textContent = `Op dit toestel staat al voortgang van "${x.m.title}" (${hier} vastgelegde punten en oefeningen); de export heeft er ${daar}. ` +
+      `Kies waarmee je verder gaat. Gebeurtenissen van beide blijven bewaard en gaan naar de Mac; de stand van dit toestel blijft als kopie bewaard.`;
+    $("herstelKeus").classList.remove("hidden");
+    return;
+  }
+  await zetTerug(data, x, true);
+  await opentNaHerstel(data, x);
+}
+async function opentNaHerstel(data, x) {
+  $("herstelKeus").classList.add("hidden"); herstelBezig = null;
+  const rec = await idb("toestand", "readonly", tx => req(tx.objectStore("toestand").get(x.m.key)));
+  M = x.m; PK = data.pakket; laad(rec); if (S.fase === "check") S.fase = "onder";
+  if (kanaal) kanaal.postMessage({ key: M.key, rev: geladenRev });
+  toon(); sync(true);
+  toast("Voortgang teruggezet uit het exportbestand.");
+}
+$("herstelExport").onclick = actie(async () => { if (!herstelBezig) return; const { data, x } = herstelBezig; await zetTerug(data, x, true); await opentNaHerstel(data, x); });
+$("herstelHier").onclick = actie(async () => {
+  if (!herstelBezig) return;
+  const { data, x } = herstelBezig;
+  await zetTerug(data, x, false);   // alleen de gebeurtenissen uit de export erbij; de stand van dit toestel blijft
+  $("herstelKeus").classList.add("hidden"); herstelBezig = null;
+  await openBewaard(x.m.key);
+});
+
+// =====================================================================================================
+// Knoppen
+// =====================================================================================================
+$("openFile").onclick = () => $("fileIn").click();
+$("fileIn").onchange = async () => {
+  const f = $("fileIn").files[0]; if (!f) return;
+  try {
+    if (f.size > 10 * 1024 * 1024) throw new Error("bestand groter dan 10 MB");
+    const data = JSON.parse(await f.text());
+    if (data && data.formaat === "kompas-tocht-export") await herstel(data); else await opent(data);
+  } catch (e) { toast("Kan dit bestand niet openen: " + e.message); }
+  $("fileIn").value = "";
+};
+$("voStart").onclick = actie(async () => {
+  // leergebieden: uit het pakket als de planner het plan al heeft gemaakt (dat staat op de kaartbladen), anders hier gekozen
+  const g = M.plan ? M.plan.areas.slice() : [...document.querySelectorAll("#voGebieden input:checked")].map(x => x.value);
+  const w = $("voGebiedWarn");
+  if (!M.plan && VRIJ.length && !g.length) { w.textContent = "Kies minstens één leergebied."; w.classList.remove("hidden"); return; }
+  if (!M.plan && g.length > 3) { w.textContent = "Kies er hoogstens drie: liever weinig en goed."; w.classList.remove("hidden"); return; }
+  w.classList.add("hidden");
+  const R = getal($("voRadius").value), radius = Number.isFinite(R) ? Math.max(10, Math.min(150, Math.round(R))) : 25;
+  let plan;
+  try { plan = maakPlan(g, radius); } catch (e) { w.textContent = e.message; w.classList.remove("hidden"); return; }
+  const ok = await doe(() => {
+    S.areas = g; S.radius = radius; S.plan = plan; S.fase = "klaar"; S.dag = 0;
+    S.days.forEach((d, k) => { d.pauzes = Object.fromEntries(plan.days[k].pauses.map(p => [pzKey(p, plan.days[k].dayId), { status: "open" }])); });
+  }, [{ type: "PlanCreated", payload: { plan } }]);
+  if (!ok) return;
+  toon();
+  toast("Tocht vastgelegd.");
+});
+$("voAnder").onclick = async () => { S = null; M = null; PK = null; if (db) await idb("meta", "readwrite", tx => { tx.objectStore("meta").delete("actief"); }); toon(); };
+$("onStart").onclick = actie(async () => {
+  const dag = S.dag;
+  const ok = await doe(() => { dagS().status = "bezig"; dagS().start = nu(); S.stappen = stappenBijVertrek(0); S.fase = "stap"; S.stap = null; },
+    [{ type: "DayStarted", payload: { dayId: M.days[dag].dayId } }]);
+  if (ok) volgendeStap();
+});
+$("onCheck").onclick = check;
+$("onSkip").onclick = () => { if (bevestig("skip", "Tik nog een keer op overslaan om te bevestigen.")) overslaan(); };
+$("ckSkip").onclick = () => { if (bevestig("skip", "Tik nog een keer op overslaan om te bevestigen.")) { meetSessie++; S.fase = "onder"; overslaan(); } };
+$("ckOpnieuw").onclick = check;
+$("ckHand").onclick = () => { const b = meting && meting.dag === S.dag && meting.i === S.doel ? meting.b : null; meetSessie++; aankomst(S.doel, "handmatig", b); };
+$("ckTerug").onclick = () => { meetSessie++; S.fase = "onder"; toon(); };
+$("onPauze").onclick = () => {
+  const box = $("onPauzeKeus"), kn = $("onPauzeKnoppen"); kn.innerHTML = "";
+  const st = dagS().pauzes, pd = S.plan.days[S.dag];
+  const opties = pd.pauses.filter(p => (st[pzKey(p, pd.dayId)] || {}).status !== "klaar")
+    .map(p => ({ kind: p.kind, key: pzKey(p, pd.dayId), txt: `${pauzeNaam(p, pd.pauses)} (${p.durationMin || PAUZE_MIN[p.kind]} min)` }))
+    .concat([{ kind: "rust", key: null, txt: "Gewoon even rust" }]);
+  for (const { kind, key, txt } of opties) {
+    const b = document.createElement("button"); b.className = "ghost"; b.textContent = txt;
+    b.onclick = actie(async () => { const ok = await doe(() => { S.stappen.unshift({ t: "pauze", kind, key, oef: null }, { t: "terug" }); }); if (ok) volgendeStap(); });
+    kn.appendChild(b);
+  }
+  box.classList.toggle("hidden");
+};
+$("onOpdrOpen").onclick = actie(async () => {
+  const id = S.onderweg;
+  const ok = await doe(() => { S.stap = { t: "oef", id, i: S.doel - 1, moment: "onderweg", terug: true }; S.onderweg = null; S.fase = "stap"; });
+  if (ok) toon();
+});
+$("onDetails").onchange = () => doe(() => { S.details = $("onDetails").checked; });
+$("onDagStop").onclick = dagStoppen;
+$("onStop").onclick = tochtStoppen;
+$("dgVolgende").onclick = actie(async () => {
+  const ok = await doe(() => { S.dag++; S.doel = 1; S.fase = "klaar"; S.vertrokken = null; });
+  if (ok) toon();
+});
+$("onDeel").onclick = exporteer; $("eiDeel").onclick = exporteer; $("dgDeel").onclick = exporteer; $("foutExport").onclick = exporteer;
+$("foutOpnieuw").onclick = async () => { if (laatsteActie) await laatsteActie(); else $("fout").classList.add("hidden"); };
+$("eiNieuw").onclick = async () => { S = null; M = null; PK = null; if (db) await idb("meta", "readwrite", tx => { tx.objectStore("meta").delete("actief"); }); toon(); };
+
+// =====================================================================================================
+// Opstarten: opslag openen, persistente opslag vragen, actieve tocht hervatten op het laatst bewaarde stadium
+// =====================================================================================================
+(async function start() {
+  try { db = await openDB(); } catch (e) { dbFout = e; }
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+  if (db) {
+    const act = await idb("meta", "readonly", tx => req(tx.objectStore("meta").get("actief")));
+    if (act) {
+      const [t, p] = await Promise.all([idb("toestand", "readonly", tx => req(tx.objectStore("toestand").get(act.key))), idb("pakketten", "readonly", tx => req(tx.objectStore("pakketten").get(act.key)))]);
+      if (t && p) { try { M = normaliseer(p.pakket); PK = p.pakket; laad(t); if (S.fase === "check") S.fase = "onder"; } catch (e) { S = null; } }
+    }
+  } else {
+    $("foutTekst").textContent = `Opslag op dit toestel werkt niet (${dbFout.message}). Voortgang kan niet bewaard worden.`;
+    $("fout").classList.remove("hidden"); $("foutOpnieuw").classList.add("hidden");
+  }
+  try { toon(); }
+  catch (e) {   // beschadigde bewaarde stand: niet bij elke start vastlopen; gegevens blijven staan en zijn via "Eerder geopend" of export te bereiken
+    S = null; M = null; PK = null;
+    try { await idb("meta", "readwrite", tx => { tx.objectStore("meta").delete("actief"); }); } catch (e2) {}
+    toon(); toast("De laatst geopende tocht kon niet getoond worden (" + e.message + "). Hij staat nog op dit toestel.");
+  }
+  sync(true);
+})();
+
+// service worker: nieuwe versie pas activeren als er geen dag loopt
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  navigator.serviceWorker.register("sw.js").then(reg => {
+    const aanbieden = () => {
+      if (!reg.waiting) return;
+      const loopt = S && S.days && S.days.some(d => d.status === "bezig");
+      if (loopt) return toast("Nieuwe appversie klaar; wordt actief na de dag.");
+      reg.waiting.postMessage({ type: "SKIP_WAITING" });
+    };
+    aanbieden();
+    reg.addEventListener("updatefound", () => { const w = reg.installing; if (w) w.addEventListener("statechange", () => { if (w.state === "installed") aanbieden(); }); });
+  }).catch(() => {});
+  let herladen = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!herladen && navigator.serviceWorker.controller) { herladen = true; if (!(S && S.days && S.days.some(d => d.status === "bezig"))) location.reload(); } });
+}
+</script>
+</body>
+</html>

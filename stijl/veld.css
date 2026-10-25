@@ -1,0 +1,46 @@
+/* Gedeelde stijl van planner en oefenapp: mat veldinstrument voor kaart en kompas (NEXT.md §4, ontwerp/schermontwerpen.html).
+   Thema volgt het systeem; html[data-theme="donker"|"licht"] dwingt er één af (keuze in localStorage "veldThema").
+   Contrast (berekend, WCAG 2.2): zie ontwerp/schermontwerpen.html. Geen externe lettertypen: werkt offline. */
+
+:root {
+  --num: "DIN Condensed", "DIN Alternate", "Bahnschrift SemiBold Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+  --tekstfont: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --hoek: 8px;
+  color-scheme: light dark;
+}
+
+/* licht: zand/papier, bosgroene tekst */
+:root, :root[data-theme="licht"] {
+  --bg: #E6E2D0; --vlak: #F3F0E4; --vlak2: #ECE8D9; --rand: #B9B49C; --lijn: #D3CEB8;
+  --tekst: #1B2A1F; --bij: #384636; --actie: #3D5524; --actieTekst: #F3F0E4;
+  --aandacht: #5E3D08; --fout: #83291B; --focus: #1B2A1F; --veldrand: #7C7862;
+  color-scheme: light;
+}
+/* donker: palet uit NEXT §4 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="licht"]) {
+    --bg: #111713; --vlak: #1B241E; --vlak2: #222D25; --rand: #33402F; --lijn: #2A3528;
+    --tekst: #E8E4D8; --bij: #A7B29E; --actie: #B6C687; --actieTekst: #111713;
+    --aandacht: #D9AD63; --fout: #ED8D7A; --focus: #E8E4D8; --veldrand: #6E7D69;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="donker"] {
+  --bg: #111713; --vlak: #1B241E; --vlak2: #222D25; --rand: #33402F; --lijn: #2A3528;
+  --tekst: #E8E4D8; --bij: #A7B29E; --actie: #B6C687; --actieTekst: #111713;
+  --aandacht: #D9AD63; --fout: #ED8D7A; --focus: #E8E4D8; --veldrand: #6E7D69;
+  color-scheme: dark;
+}
+
+/* hidden wint altijd, ook van display:grid/flex in de schermindeling */
+[hidden], .hidden { display: none !important; }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* invoervelden: rand minstens 3:1 tegen achtergrond en veld (WCAG 1.4.11), berekend */
+input[type=text], input[type=number], input[type=date], select { border-color: var(--veldrand) !important; }
+
+.nummer { font-family: var(--num); font-weight: 700; font-stretch: condensed; font-variant-numeric: tabular-nums; }
+.code { font-family: var(--mono); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
