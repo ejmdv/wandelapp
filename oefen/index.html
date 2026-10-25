@@ -447,7 +447,8 @@ function normaliseerV2(pk) {
       return p;
     });
     const nood = isStr(d.nood) && /^https?:\/\//i.test(d.nood) ? d.nood : "";
-    return { dayId: d.dayId, seq: di + 1, date: /^\d{4}-\d{2}-\d{2}$/.test(d.date || "") ? d.date : "", cps, nood };
+    // restKnown: de planner had bankjesgegevens; dan geen pauze zonder bankje (zie contract/plan.js)
+    return { dayId: d.dayId, seq: di + 1, date: /^\d{4}-\d{2}-\d{2}$/.test(d.date || "") ? d.date : "", cps, nood, ...(typeof pk.trip.restKnown === "boolean" ? { rustBekend: pk.trip.restKnown } : {}) };
   });
   return { kind: "v2", key: `${m.tripId}:${m.revision}:${m.contentHash.slice(0, 12)}`, tripId: m.tripId, revision: m.revision, routeHash: m.routeHash,
     printCode: m.printCode, title: isStr(pk.trip.title) ? pk.trip.title : "Tocht", days, plan, planSeed: Canon.hash(pk.checkpoints), decl: pk.trip && pk.trip.northReference && isNum(pk.trip.northReference.declinationDeg) ? pk.trip.northReference.declinationDeg : null, warnings: ((pk.checks || {}).warnings || []).filter(isStr) };
@@ -858,6 +859,7 @@ function zonStand(date, lat, lon) {
 }
 // zonsondergang (h = -0,833°) of einde burgerlijke schemer (h = -6°), offline; zelfde formule als de noodpagina (SunCalc)
 function zonOnder(date, lat, lon, h) {
+  date = new Date(date); date.setHours(12, 0, 0, 0);   // de zonsondergang van deze kalenderdag, ook vlak na middernacht
   const dayMs = 864e5, J1970 = 2440588, J2000 = 2451545, J0 = 0.0009, e = rad(23.4397);
   const d = date.valueOf() / dayMs - 0.5 + J1970 - J2000, lw = rad(-lon), phi = rad(lat);
   const n = Math.round(d - J0 - lw / (2 * Math.PI));

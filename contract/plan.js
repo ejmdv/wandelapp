@@ -32,7 +32,7 @@
   // welke momenten passen bij punt i van n: op de start alleen vertrekken, op het eindpunt alleen aankomen
   const momentenBij = (i, n) => i === 0 ? ["vertrek", "onderweg"] : i === n - 1 ? ["aankomst"] : ["aankomst", "vertrek", "onderweg"];
 
-  // days: [{ dayId, seq, cps: [{ id, oefenOk, rust, cumStraight, cumPath }] }], afstanden in meters vanaf de dagstart;
+  // days: [{ dayId, seq, rustBekend?, cps: [{ id, oefenOk, rust, cumStraight, cumPath }] }], afstanden in meters vanaf de dagstart;
   // rust = er staat een bankje, picknicktafel of schuilhut vlakbij het punt.
   // pool: de vrijgegeven oefeningen. Geeft per dag { dayId, pauses: [{ pauseId, key, kind, durationMin, cpIndex, checkpointId }],
   // assign: { cpIndex: { moment: templateId } } }. Een pauze zonder geschikt punt krijgt cpIndex null (zelf te nemen).
@@ -49,7 +49,8 @@
       let na = 0;   // pauzes blijven in volgorde: een latere pauze nooit op of vóór het punt van de vorige
       // besluit 25-10-2026: koffie en lunch alleen bij een punt met een bankje (of picknicktafel, schuilhut) vlakbij, binnen
       // een venster rond de gewenste plek. Kent de dag geen enkel bankje (oud pakket, bankjes niet geladen): zoals vroeger.
-      const metBank = P.some(p => p.rust), venster = Math.max(2500, K * 0.15);
+      // rustBekend: de planner had de bankjes (staat in het pakket); alleen zonder die informatie (oud pakket) de terugval
+      const metBank = d.rustBekend != null ? !!d.rustBekend : P.some(p => p.rust), venster = Math.max(2500, K * 0.15);
       for (const pz of PAUZES) {
         let best = -1, bd = Infinity;
         P.forEach((p, i) => {
